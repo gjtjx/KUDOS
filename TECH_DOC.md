@@ -1,3 +1,5 @@
+> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+
 # ClinicPilot AI — Technical Design
 
 ## 1. Requirements and implementation
@@ -125,3 +127,5 @@ llm.py supports both API shapes and records provider response ID, model, latency
 逐字稿摘要以獨立工具 summarize_transcript 提取四個 nullable 欄位及 evidence。所有非空欄位必須有逐字引用，引用必須出現在原文；未提及欄位為 null。這是來源驗證，不是臨床正確性證明。摘要不使用 P001 個資，也不寫入聊天或預約資料表。
 
 The summary endpoint is stateless, does not inject P001 context and does not persist transcripts. It validates evidence provenance but still requires human semantic review. The browser timeout allows two sequential provider calls; server timeout is configurable from 1 to 180 seconds. Chat execution remains single-worker and serialized.
+
+最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。

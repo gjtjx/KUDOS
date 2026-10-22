@@ -2,8 +2,10 @@
 import os
 import time
 import copy
+from pathlib import Path
 from urllib.parse import urlsplit
 import httpx
+from .observability import observe_generation
 
 
 class ProviderError(ValueError):
@@ -25,14 +27,23 @@ def configuration():
     timeout = float(os.getenv('LLM_TIMEOUT_SECONDS', '90'))
     if not 1 <= timeout <= 180:
         raise ValueError('LLM_TIMEOUT_SECONDS must be between 1 and 180')
-    choice = os.getenv('LLM_TOOL_CHOICE', 'forced')
+    # These providers reject forced selection in supported/default thinking modes.
+    compatible_auto = url.hostname in ('api.deepseek.com', 'api.poe.com')
+    choice = os.getenv('LLM_TOOL_CHOICE', 'auto' if compatible_auto else 'forced')
     if choice not in ('auto','required','forced'):
         raise ValueError('Invalid LLM_TOOL_CHOICE')
+    key = os.getenv('LLM_API_KEY','').strip() or os.getenv('POE_API_KEY','').strip()
+    if os.getenv('LLM_API_KEY_FILE'):
+        try:
+            key = Path(os.environ['LLM_API_KEY_FILE']).read_text(encoding='utf-8').strip()
+        except (OSError, UnicodeError):
+            raise ValueError('Cannot read LLM_API_KEY_FILE') from None
     return {'style':style, 'base':base, 'model':os.getenv('LLM_MODEL','').strip(),
-            'tool_choice':choice, 'strict':os.getenv('LLM_STRICT_TOOLS','true').lower()=='true',
-            'key':os.getenv('LLM_API_KEY','').strip() or os.getenv('POE_API_KEY','').strip(), 'timeout':timeout}
+            'tool_choice':choice, 'strict':os.getenv('LLM_STRICT_TOOLS','false' if compatible_auto else 'true').lower()=='true',
+            'key':key, 'timeout':timeout}
 
 
+@observe_generation
 async def complete(messages, tools=None):
     config = configuration()
     if not config['key'] or not config['model']:

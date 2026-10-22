@@ -50,11 +50,43 @@ class LLMTransportTests(unittest.IsolatedAsyncioTestCase):
     def test_configuration_validation(self):
         for changes in ({'LLM_API_STYLE':'bad'},{'LLM_BASE_URL':'http://remote.test'},{'LLM_BASE_URL':'https://user:secret@example.test'},{'LLM_TIMEOUT_SECONDS':'0'},{'LLM_TOOL_CHOICE':'bad'}):
             with self.subTest(changes=changes),patch.dict(os.environ,changes),self.assertRaises(ValueError): configuration()
+
+    def test_provider_defaults_work_with_minimal_env_and_allow_explicit_override(self):
+        with patch.dict(os.environ,{},clear=True):
+            for base in ('https://api.deepseek.com','https://api.poe.com/v1'):
+                os.environ['LLM_BASE_URL']=base
+                self.assertEqual(configuration()['tool_choice'],'auto')
+                self.assertFalse(configuration()['strict'])
+            os.environ.update(LLM_TOOL_CHOICE='required',LLM_STRICT_TOOLS='true')
+            self.assertEqual(configuration()['tool_choice'],'required')
+            self.assertTrue(configuration()['strict'])
     async def test_visit_flow_in_llm_mode_never_uses_local_shortcut(self):
         os.environ['AI_MODE']='llm';agent=Agent(None,None)
         agent.llm=AsyncMock(return_value={'tool_calls':[{'function':{'name':'route_intent','arguments':json.dumps({'intent':'visit_flow'})}}]})
         result=await agent.route('我到医院的流程',{'draft':{},'history':[],'active':False},{})
         agent.llm.assert_awaited_once();self.assertEqual(result['intent'],'visit_flow')
+
+    async def test_router_repairs_invalid_shape_once_without_mutating_draft(self):
+        os.environ['AI_MODE']='llm';agent=Agent(None,None)
+        invalid={'tool_calls':[{'function':{'name':'route_intent','arguments':json.dumps({'intent':'knowledge','booking_action':None,'clear_slots':None})}}]}
+        valid={'tool_calls':[{'function':{'name':'route_intent','arguments':json.dumps({'intent':'knowledge','booking_action':'collect','clear_slots':[]})}}]}
+        state={'draft':{'doctor_id':'D103','treatment_id':'T003'},'history':[],'active':True}
+        agent.llm=AsyncMock(side_effect=[invalid,valid])
+        result=await agent.route('皮膚諮詢前需要準備甚麼？',state,{})
+        self.assertEqual(result['intent'],'knowledge')
+        self.assertEqual(agent.llm.await_count,2)
+        self.assertEqual(state['draft'],{'doctor_id':'D103','treatment_id':'T003'})
+        self.assertEqual(agent.llm_calls[0]['error_code'],'invalid_router_output')
+
+    async def test_router_repair_is_bounded_and_provider_failure_is_not_retried(self):
+        os.environ['AI_MODE']='llm';agent=Agent(None,None)
+        state={'draft':{},'history':[],'active':False}
+        agent.llm=AsyncMock(return_value={'tool_calls':[]})
+        with self.assertRaisesRegex(ProviderError,'invalid_router_output'): await agent.route('hello',state,{})
+        self.assertEqual(agent.llm.await_count,2)
+        agent.llm=AsyncMock(side_effect=ProviderError('authentication_failed'))
+        with self.assertRaisesRegex(ProviderError,'authentication_failed'): await agent.route('hello',state,{})
+        self.assertEqual(agent.llm.await_count,1)
 
 class SummaryUnitTests(unittest.IsolatedAsyncioTestCase):
     async def test_missing_fields_are_null(self):

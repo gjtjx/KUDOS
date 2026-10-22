@@ -1,2 +1,5 @@
 -r requirements.txt
 coverage==7.6.12
+PyYAML==6.0.2
+kubernetes-validate==1.37.0
+jsonschema==4.26.0

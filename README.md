@@ -1,3 +1,5 @@
+> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+
 # ClinicPilot AI
 
 介面與固定回覆現採繁體中文／English 對照。 / The interface and fixed replies use paired Traditional Chinese and English.
@@ -43,27 +45,9 @@ The seed is insert-if-missing, not a migration system. To reset demo data, stop 
 
 Poe Claude Sonnet 5.5 has been tested with real tool calls, retrieval, booking and transcript summarization. New installations without credentials still default to local mode.
 
-把 API Key 放在未追蹤的 `.env`： / Put the API key in the untracked `.env`:
+完整 DeepSeek 設定放在 .env：AI_MODE=llm、LLM_API_KEY=自己的密鑰、LLM_BASE_URL=https://api.deepseek.com、LLM_MODEL=deepseek-flash、LLM_API_STYLE=responses、LLM_TOOL_CHOICE=auto、LLM_STRICT_TOOLS=false、LLM_TIMEOUT_SECONDS=90。每項各佔一行。/ Put the complete matching provider profile in .env, one setting per line.
 
-```dotenv
-LLM_API_KEY=your-poe-api-key
-```
-
-把供應商設定放在 `.env.local`，避免編輯器舊設定覆蓋已驗證參數： / Put provider settings in `.env.local`:
-
-```dotenv
-AI_MODE=llm
-LLM_BASE_URL=https://api.poe.com/v1
-LLM_MODEL=claude-sonnet-5.5
-LLM_API_STYLE=chat_completions
-LLM_TOOL_CHOICE=auto
-LLM_STRICT_TOOLS=false
-LLM_TIMEOUT_SECONDS=90
-```
-
-重新啟動後，`/api/health` 和畫面應顯示模型名稱。優先序為程序環境變數 → .env.local → .env。這兩個檔都不進 Git 或 Docker image。
-
-Restart and verify the model name in health/UI. Precedence: process environment, .env.local, then .env. Neither settings file is committed or included in Docker images.
+Poe/Sonnet 使用相應 Poe 密鑰，URL=https://api.poe.com/v1、model=claude-sonnet-5.5、style=chat_completions。程序環境變數優先於 .env；不再混入 .env.local。/ Use matching credentials when switching providers.
 
 Poe 上此 Claude 模型實測不支援 Responses method，強制工具選擇也被上游拒絕，因此使用 auto，並由應用程式強制驗證必須收到正確工具呼叫。其他供應商可設定 `LLM_API_STYLE=responses` 或 `chat_completions`，及 `LLM_TOOL_CHOICE=forced`、`LLM_STRICT_TOOLS=true`；不要假設不同模型完全相容。
 
@@ -153,8 +137,11 @@ Tests create their own temporary SQLite files under runtime/tests. They do not w
 
 Single predefined adult patient P001; no authentication; bind locally. New timeslots are assumed available, per assignment. New bookings cannot be in the past. Historical seeded records remain unchanged. This is clinic service navigation, not diagnosis or prescribing.
 
-Real model calls require configured credentials. Live Poe Claude acceptance is recorded separately from mocked unit tests. Transcript summarization is implemented; Langfuse and Kubernetes remain unimplemented.
+Real model calls require configured credentials. Live Poe Claude acceptance is recorded separately from mocked unit tests. Transcript summarization and local tracing are implemented. Kubernetes manifests are provided; external Langfuse is not integrated.
 
 Docker is included as an optional path: `docker compose up --build`. It has not been exercised on this machine. The volume persists the database.
 
 Submission repository: https://github.com/gjtjx/KUDOS. The source excludes .env, .venv, runtime, node_modules and dist (covered by .gitignore); package-lock.json is included. The local delivery also contains prebuilt frontend assets, so start.cmd can use an existing compatible Python environment without rebuilding.
+
+
+最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。

@@ -1,3 +1,5 @@
+> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+
 # ClinicPilot AI — 需求與功能核對 / Requirements Review
 
 核對日期 / Reviewed: 2026-10-22  
@@ -39,7 +41,7 @@ Patient question → grounded clinic/doctor/service retrieval → suitable servi
 |---|---|---|
 | 對話逐字稿醫療摘要 / Transcript summarizer | 加分 / Bonus | 已實作 POST /api/transcripts/summarize 及頁面入口；四欄位、原文證據、缺失為 null。 / Implemented endpoint and UI with evidence-backed four-field output. |
 | Langfuse／LLM 追蹤 / LLM observability | 加分 / Bonus | 已有每次 LLM 的模型、response ID、耗時、輸入/輸出 token；無成本計算或 Langfuse。 / Per-call model/ID/latency/tokens; no cost calculation or external tracing. |
-| Docker／Kubernetes / Containers | 加分 / Bonus | 有 Dockerfile 與 compose.yaml；未實際驗證容器啟動，無 Kubernetes。 / Docker files supplied, runtime unverified; no Kubernetes. |
+| Docker／Kubernetes / Containers | 加分 / Bonus | 有 Dockerfile 與 compose.yaml；未實際驗證容器啟動，Kubernetes 設定已提供，runtime 未驗收。 / Docker files supplied, runtime unverified; Kubernetes manifests supplied, runtime unverified. |
 | 排班衝突、超額預約 / Schedule conflict detection | 明確不要求 / Explicitly not required | 依題目假設時段可用，未實作衝突檢查。 / Timeslots assumed available. |
 | 登入與多病人切換 / Authentication and multiple patients | 簡化假設排除 / Excluded by demo assumption | 固定 P001，沒有登入。 / Fixed P001 without login. |
 | MCP 與 REST 同時實作 / Implement both protocols | 不要求 / Not required | 題目為二選一，本作業採 REST；無須另加 MCP 才算符合此條。 / REST selected; MCP is not additionally required. |
@@ -72,3 +74,6 @@ Patient question → grounded clinic/doctor/service retrieval → suitable servi
 UI labels, controls, empty/error states, fixed replies, booking statuses, service names and preparation instructions are paired in Traditional Chinese and English. Original CSV records, proper names, addresses and identifiers are preserved. Simplified Chinese, Traditional Chinese and English inputs remain supported. Live bilingual output has been checked for the recorded cases, with broader quality evaluation still required.
 
 目前功能的單元、整合及前端元件測試對照，見 MAINTENANCE.md；實測數量與覆蓋率見 VALIDATION.md。新增就診流程為本次改善，不把資料缺少的院內規定宣稱為原始需求已提供。 / See MAINTENANCE.md for feature-to-test mapping and VALIDATION.md for measured results. Visit orientation is an added improvement; missing on-site policies are not treated as supplied facts.
+
+
+最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。

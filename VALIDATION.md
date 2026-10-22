@@ -1,10 +1,14 @@
+> 最新驗收 / Latest: 109 後端＋28 前端＝137 項測試通過，前端正式建置成功。DeepSeek 與 Sonnet 最終各通過 82 項，見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。下文 78/167 項與瀏覽器紀錄是較早階段的歷史驗收。
+
+> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+
 # 測試與驗收 / Validation — 2026-10-22
 
 ## 已完成 / Completed
 
 - 真實 Poe Claude Sonnet 5.5：14 則對話及 2 則逐字稿摘要，78 項檢查通過。另有逐字稿指令注入測例，診斷與用藥保持 null。 / Live Claude: 14 chat turns, two summaries, 78 passing checks, plus a transcript-injection case.
-- 後端 86 項單元／整合測試通過；前端 22 項單元／元件測試通過，共 108 項。 / 86 backend and 22 frontend tests passed, 108 total.
-- 後端覆蓋率 97.50%（行與分支合併，backend/app 全部模組）；前端核心元件與 API 最近覆蓋率為行、敘述、函式 100%，分支 92.30%，本輪前端未變更。 / Backend combined coverage 97.50%; latest frontend core coverage is 100% lines/statements/functions and 92.30% branches; frontend code is unchanged.
+- 後端 109 項單元／整合測試通過；前端 28 項單元／元件測試通過，共 137 項。 / 109 backend and 28 frontend tests passed, 137 total.
+- 後端覆蓋率 98.01%（行與分支合併，backend/app 全部模組）；前端核心元件與 API 最近覆蓋率為行與函式 100%，敘述 99.23%，分支 93.83%。 / Backend combined coverage 98.01%; latest frontend core coverage is 100% lines/functions, 99.23% statements and 93.83% branches.
 - 額外真實情境 167 項檢查通過，修復後原始完整流程 78 項亦通過；最後文案調整另有 4 項針對性檢查。發現與修正詳見 [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / 167 additional live checks and the 78-check core rerun passed, plus four final formatting checks; see the extended report.
 - React 正式建置成功。 / Production build passed.
 
@@ -51,6 +55,8 @@ GPT-6 Astra High 指 Codex 對話模型，未作獨立 API 對跑，無其延遲
 
 The Codex-selected GPT model was not run as an independent API benchmark. Review comments are not benchmark results.
 
-GitHub Actions 先前因帳號帳單鎖定未啟動：[run 39775522266](https://github.com/gjtjx/KUDOS/actions/runs/39775522266)。本機測試通過不代表雲端 CI 通過。Docker runtime、其他作業系統、多 worker、負載、DST 歧義時間及臨床正確性仍未驗收。未實作錄音轉文字、Langfuse 或 Kubernetes。
+GitHub Actions 先前因帳號帳單鎖定未啟動：[run 39775522266](https://github.com/gjtjx/KUDOS/actions/runs/39775522266)。本機測試通過不代表雲端 CI 通過。Docker runtime、其他作業系統、多 worker、負載、DST 歧義時間及臨床正確性仍未驗收。未實作錄音轉文字、外部 Langfuse；Kubernetes 已提供設定，runtime 尚未驗收。
 
-Cloud CI remains blocked by the previously reported account lock. Docker, cross-platform, distributed/load, DST and clinical validation remain outside acceptance. Audio transcription, Langfuse and Kubernetes are not implemented.
+Cloud CI remains blocked by the previously reported account lock. Docker, cross-platform, distributed/load, DST and clinical validation remain outside acceptance. Audio transcription and external Langfuse are not implemented; Kubernetes manifests are provided, runtime unverified.
+
+最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。

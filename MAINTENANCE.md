@@ -1,3 +1,5 @@
+> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+
 # 維護手冊 / Maintenance Manual
 
 適用版本：2026-10-22。維護對象為固定病人 P001 的本機示範系統。原始需求逐項核對見 [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md)，測試結果見 [VALIDATION.md](VALIDATION.md)。
@@ -154,15 +156,15 @@ New chat rotates the session and clears the UI/unsent input without deleting sav
 3. 停止舊服務，更新程式與前端 dist，保留 `.env`、runtime 及備份，再啟動。 / Stop, update code/assets, preserve environment/data/backups, then restart.
 4. 執行第 2 節檢查。如失敗，部署上一版原始碼並重建；只有資料格式確實變更且需要還原時才使用備份，先保存失敗版本新增的資料。 / Smoke-test; roll back code/assets if needed. Restore data only when schema changes require it, preserving new records first.
 
-本版本沒有資料表遷移。真實 Claude 已完成特定測例驗收；其他供應商、Docker 執行、跨平台、負載及 DST 歧義時間仍需獨立驗收；單元測試不能取代這些檢查。
+本版本以 IF NOT EXISTS 新增追蹤表，不修改既有業務表。真實 Claude 已完成特定測例驗收；其他供應商、Docker 執行、跨平台、負載及 DST 歧義時間仍需獨立驗收；單元測試不能取代這些檢查。
 
-This release has no schema migration. Poe Claude has live acceptance for the recorded cases; other providers, Docker, other platforms, load and DST ambiguity require separate acceptance.
+This release adds trace tables without altering business tables. Poe Claude has live acceptance for the recorded cases; other providers, Docker, other platforms, load and DST ambiguity require separate acceptance.
 
 ## 8. 真實模型與摘要維護 / Live model and summary maintenance
 
-已驗證的 Poe 模型參數見 README。密鑰放 .env、模型參數放 .env.local；不要直接套用 Responses 或 forced tools 到不支援的模型。遇 401 檢查密鑰，402 檢查點數，404 檢查模型 ID；400 可能為介面或工具參數不相容。前端呼叫紀錄可看模型名稱、response ID，後端只回安全錯誤分類。
+已驗證的 Poe 模型參數見 README。密鑰與同一供應商完整參數均放 .env；不要直接套用 Responses 或 forced tools 到不支援的模型。遇 401 檢查密鑰，402 檢查點數，404 檢查模型 ID；400 可能為介面或工具參數不相容。前端呼叫紀錄可看模型名稱、response ID，後端只回安全錯誤分類。
 
-See README for verified Poe settings. Store the key in .env and provider settings in .env.local. Check credentials for 401, quota for 402, model ID for 404, and protocol/tool compatibility for 400. Traces show model and response IDs without credentials.
+See README for verified Poe settings. Store the complete matching provider profile in .env. Check credentials for 401, quota for 402, model ID for 404, and protocol/tool compatibility for 400. Traces show model and response IDs without credentials.
 
 需要真實回歸時執行 `python scripts/live_acceptance.py --env-file .env --model claude-sonnet-5.5 --summary`，會消耗 API 額度。輸出在 runtime/live-acceptance 下；保持隔離，不把測試 DB 指向目前 clinic.db。真實模型可能非決定性；失敗時先檢查 report.json 中的原句、intent、sources、tool_trace 與實際 DB 紀錄，勿只重跑直到通過。
 
@@ -173,3 +175,5 @@ Live regression consumes API quota and produces isolated evidence reports. Inspe
 Added tests cover API compatibility, strict host validation, transcript evidence and UI behavior. Exact evidence matching does not prove semantic accuracy; clinically meaningful summaries require human review. Transcripts are not persisted by this endpoint, while the provider may have its own retention policy.
 
 摘要引文驗證失敗時，最多再呼叫模型一次修復。第二次仍失敗回 502，畫面不保留舊摘要。tool_trace 中可見 rejected 的驗證原因；不要改成跳過引文驗證。 / Evidence validation allows one model repair attempt, then fails explicitly; never bypass validation to force success.
+
+最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。

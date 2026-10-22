@@ -7,7 +7,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from dotenv import load_dotenv
+from acceptance_config import add_provider_options, load_provider
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'backend'))
@@ -17,9 +17,9 @@ def main():
     parser.add_argument('--env-file',type=Path,default=ROOT/'.env')
     parser.add_argument('--summary',action='store_true')
     parser.add_argument('--model',help='Explicit model override for reproducible comparisons')
+    add_provider_options(parser)
     args=parser.parse_args()
-    load_dotenv(args.env_file,override=True)
-    load_dotenv(args.env_file.with_name('.env.local'),override=True)
+    load_provider(args)
     os.environ['AI_MODE']='llm'
     if args.model:
         os.environ['LLM_MODEL']=args.model
@@ -37,10 +37,10 @@ def main():
     app=create_app(folder/'test.db',ROOT/'mock-data')
     client=TestClient(app)
     def save(): destination.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
-    def check(name,condition):
+    def check(name,condition,critical=True):
         report['checks'].append({'name':name,'passed':bool(condition)})
         save()
-        if not condition: raise AssertionError(name)
+        if not condition and critical: raise AssertionError(name)
     def chat(message,intent,key,session='main'):
         response=client.post('/api/chat',json={'message':message,'session_id':session,'request_id':key})
         body=response.json()
@@ -48,7 +48,7 @@ def main():
         save()
         print(key+' HTTP '+str(response.status_code)+' '+str(body.get('intent','error')),flush=True)
         check(key+' HTTP success',response.status_code==200)
-        check(key+' intent',body['intent']==intent)
+        check(key+' intent',body['intent']==intent,critical=False)
         check(key+' real routing',any(t['tool']=='LLM route_intent' for t in body['tool_trace']))
         check(key+' bilingual',bool(re.search('[\u4e00-\u9fff]',body['reply'])) and bool(re.search('[A-Za-z]{3}',body['reply'])))
         return body
@@ -104,12 +104,23 @@ def main():
             response=client.post('/api/transcripts/summarize',json={'transcript':'病人：我想問診所幾點開門。'})
             report['summary_missing']={'http_status':response.status_code,'result':response.json()}
             check('missing medical facts remain null',response.status_code==200 and all(v is None for v in response.json()['summary'].values()))
-        report['status']='passed'
+        activity=client.get('/api/observability?limit=100').json()
+        report['observability']=activity
+        calls=[t for turn in report['turns'] for t in turn['result'].get('tool_trace',[]) if t['tool'].startswith('LLM ')]
+        for name in ('summary','summary_missing'):
+            if name in report:
+                calls += report[name]['result'].get('tool_trace',[])
+        check('persistent trace call count',activity['summary']['llm_calls']==len(calls))
+        check('cached retry has no extra model calls',activity['summary']['cache_hits']==1)
+        check('trace token totals match provider metadata',activity['summary']['input_tokens']==sum(t.get('input_tokens') or 0 for t in calls) and activity['summary']['output_tokens']==sum(t.get('output_tokens') or 0 for t in calls))
+        check('traces contain no prompts or credentials',all('user' not in t and 'messages' not in t for t in activity['traces']) and cfg['key'] not in json.dumps(activity))
+        report['status']='passed' if all(c['passed'] for c in report['checks']) else 'failed'
     except Exception as error:
         report['status']='failed';report['failure_type']=type(error).__name__;report['failure']=str(error)[:300]
         raise
     finally:
         client.close();report['finished_at']=datetime.now(timezone.utc).isoformat();save()
         print('RESULT '+report['status']+' '+str(len(report['checks']))+' checks',flush=True)
+    if report['status']!='passed': raise SystemExit(1)
 
 if __name__=='__main__': main()

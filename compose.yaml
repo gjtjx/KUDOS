@@ -1,12 +1,26 @@
 services:
   clinicpilot:
+    image: clinicpilot:local
     build: .
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${CLINIC_PORT:-8000}:8000"
     environment:
       AI_MODE: local
+      DATABASE_PATH: /app/runtime/clinic.db
+      TRACE_ENABLED: "true"
+      TRACE_MAX_RECORDS: "1000"
     volumes:
       - clinic-data:/app/runtime
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    stop_grace_period: 210s
+    mem_limit: 512m
+    cpus: 1.0
 volumes:
   clinic-data:
-

@@ -1,5 +1,6 @@
 .env
 .env.local
+.secrets/
 .venv/
 __pycache__/
 *.pyc
@@ -10,3 +11,9 @@ frontend/dist/
 .coverage
 coverage.xml
 frontend/coverage/
+
+
+# Alternate credential files must never be published
+*.env
+.env.*
+!.env.example

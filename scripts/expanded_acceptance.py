@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from dotenv import load_dotenv
+from acceptance_config import add_provider_options, load_provider
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
@@ -90,9 +90,9 @@ def main():
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--only", help="Comma-separated scenario names")
     parser.add_argument("--summary", action="store_true")
+    add_provider_options(parser)
     args = parser.parse_args()
-    load_dotenv(args.env_file, override=True)
-    load_dotenv(args.env_file.with_name(".env.local"), override=True)
+    load_provider(args)
     os.environ["AI_MODE"] = "llm"
     from app.main import create_app
     from app.llm import configuration

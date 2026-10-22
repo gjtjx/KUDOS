@@ -1,0 +1,17 @@
+# Use with: docker compose -f compose.yaml -f compose.llm.yaml up --build -d
+services:
+  clinicpilot:
+    environment:
+      AI_MODE: llm
+      LLM_API_KEY_FILE: /run/secrets/llm_api_key
+      LLM_BASE_URL: https://api.poe.com/v1
+      LLM_MODEL: claude-sonnet-5.5
+      LLM_API_STYLE: chat_completions
+      LLM_TOOL_CHOICE: auto
+      LLM_STRICT_TOOLS: "false"
+      LLM_TIMEOUT_SECONDS: "90"
+    secrets:
+      - llm_api_key
+secrets:
+  llm_api_key:
+    file: ./.secrets/llm_api_key

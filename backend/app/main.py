@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -21,11 +21,11 @@ from .agent import Agent
 from .llm import ProviderError, configuration
 from .transcripts import TranscriptInput, summarize
 from .localization import TRANSLATIONS, localized_booking
+from .observability import TraceStore, current_trace, mark_outcome
 
 ROOT = Path(__file__).resolve().parents[2]
 try:
     from dotenv import load_dotenv
-    load_dotenv(ROOT / ".env.local")
     load_dotenv(ROOT / ".env")
 except ImportError:
     pass
@@ -39,7 +39,25 @@ def create_app(db_path=None, data_dir=None):
     db = Database(db_path or os.getenv("DATABASE_PATH", str(ROOT / "runtime" / "clinic.db")), data_dir or ROOT / "mock-data")
     app.state.db = db
     app.state.lock = asyncio.Lock()
+    app.state.tracing = TraceStore(db)
     app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+
+    @app.middleware("http")
+    async def trace_requests(request, call_next):
+        operations = {"/api/chat": "chat", "/api/transcripts/summarize": "transcript_summary"}
+        if request.method != "POST" or request.url.path not in operations or not app.state.tracing.enabled:
+            return await call_next(request)
+        context = app.state.tracing.start(operations[request.url.path], app.state.agent.mode)
+        token = current_trace.set(context)
+        status = 500
+        try:
+            response = await call_next(request)
+            status = response.status_code
+            response.headers["X-Trace-ID"] = context["id"]
+            return response
+        finally:
+            app.state.tracing.finish(context, status)
+            current_trace.reset(token)
 
     @app.exception_handler(sqlite3.Error)
     async def database_error(request, error):
@@ -57,6 +75,19 @@ def create_app(db_path=None, data_dir=None):
                 "model": os.getenv("LLM_MODEL") if app.state.agent.mode == "llm" else None,
                 "api_style": os.getenv("LLM_API_STYLE", "chat_completions") if app.state.agent.mode == "llm" else None}
 
+    @app.get("/api/live")
+    def live():
+        return {"status": "alive"}
+
+    @app.get("/api/ready")
+    def ready():
+        db.rows("SELECT 1")
+        return {"status": "ready"}
+
+    @app.get("/api/observability")
+    def observability(limit: int = Query(default=20, ge=1, le=100)):
+        return app.state.tracing.overview(limit)
+
     @app.get("/api/profile")
     def profile():
         return {**db.profile(), "known_allergies_zh": "青黴素、花生"}
@@ -68,7 +99,9 @@ def create_app(db_path=None, data_dir=None):
         if app.state.agent.mode != 'llm':
             raise HTTPException(503, "請先啟用真實模型 / Enable LLM mode to summarize transcripts")
         try:
-            return await summarize(body.transcript)
+            result = await summarize(body.transcript)
+            mark_outcome("summarized")
+            return result
         except ProviderError as error:
             raise HTTPException(502, "摘要服務失敗 / Summary provider failed: " + error.code) from error
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
@@ -129,6 +162,7 @@ def create_app(db_path=None, data_dir=None):
             if prior:
                 if prior[0]["payload"] != payload:
                     raise HTTPException(409, "此請求編號已用於另一則訊息。 / Request ID already used for another message")
+                mark_outcome("cached", cached=True)
                 return json.loads(prior[0]["response"])
             state = db.state(body.session_id)
             try:
@@ -142,6 +176,7 @@ def create_app(db_path=None, data_dir=None):
             response["session_id"] = body.session_id
             response["latency_ms"] = round((time.monotonic() - started) * 1000)
             db.save(body.session_id, state, key, payload, response)
+            mark_outcome("booked" if response.get("booking") else "rejected" if any(t.get("status")=="rejected" for t in response.get("tool_trace",[])) else "draft" if response.get("draft") else "answered")
             return response
 
     app.state.agent = Agent(db, app)

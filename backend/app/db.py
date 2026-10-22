@@ -3,6 +3,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
+from .observability import SCHEMA as TRACE_SCHEMA
 
 TABLES = {
     "clinics": "clinic_id", "doctors": "doctor_id", "treatments": "treatment_id",
@@ -29,6 +30,7 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as c:
             c.executescript(SCHEMA)
+            c.executescript(TRACE_SCHEMA)
             for table, primary in TABLES.items():
                 with (Path(data_dir) / (table + ".csv")).open(encoding="utf-8-sig", newline="") as f:
                     reader = csv.DictReader(f)
@@ -76,4 +78,3 @@ class Database:
         with self.connect() as c:
             c.execute("INSERT OR REPLACE INTO sessions VALUES(?,?)", (session, json.dumps(state)))
             c.execute("INSERT INTO requests VALUES(?,?,?)", (key, payload, json.dumps(response)))
-
