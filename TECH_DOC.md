@@ -41,6 +41,7 @@ HTTPX ASGITransport dispatches real HTTP request/response objects through the ex
 
 State is keyed by opaque browser session ID, always bound to P001. Each state contains an active flag, a four-slot draft with a booking idempotency key, and a capped twenty-message history.
 
+- visit_flow: provide general visit orientation, enriched with the next booking and catalog address/preparation. Missing on-site policies are explicitly unknown; no booking is created and drafts are preserved. Recognized visit queries use this deterministic path in both modes.
 - knowledge: retrieve evidence and answer; leave any active draft intact.
 - bookings: read latest records via REST, return next future Confirmed booking plus history.
 - book: merge explicitly extracted parameters. Ask for missing doctor, treatment, date and time. Once complete, execute the booking API.
@@ -104,3 +105,7 @@ Automated tests exercise persisted records through FastAPI, multi-turn completio
 
 Structured medical transcript extraction, external tracing, automated clinical evaluations, authentication, rate limiting, long-term session retention and booking cancellation/rescheduling are outside the submitted MVP. Docker files are supplied but not runtime-tested.
 
+
+## 9. Regression fix and maintainability
+
+The reported new-chat utterance “我到医院的流程” previously fell through to lexical search with no matching tokens. The fallback then unconditionally mentioned allergies and generic help; other answers dumped full catalog rows. `answers.py` now separates visit guidance from field-specific factual responses, omits unrelated personal context, and preserves conditional preparation instructions. The React application and API client are independently importable for component/unit tests. New chat also clears unsent input. See MAINTENANCE.md for the feature-to-test matrix and operational procedures.

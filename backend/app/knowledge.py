@@ -12,7 +12,9 @@ EXPANSIONS = {
     "checkup|体检": "general health checkup preventative",
     "hour|open|营业|时间": "operating_hours",
     "cancel|取消": "cancellation_policy",
-    "fee|price|费用|价格": "price_usd consultation_fee_usd",
+    "prepar|instruction|fasting|准备|注意|空腹": "pre_treatment_instructions",
+    "address|location|phone|地址|电话|在哪": "address phone",
+    "fee|price|cost|费用|价格|多少钱": "price_usd consultation_fee_usd",
 }
 MATCHES = {"T001": ["D101"], "T002": ["D102"], "T003": ["D103"], "T004": ["D101", "D102"], "T005": ["D104"]}
 
@@ -29,4 +31,3 @@ def retrieve(db, query):
     match = " OR ".join('"' + token + '"' for token in tokens)
     rows = db.rows("SELECT source,record_id,content,bm25(knowledge) AS score FROM knowledge WHERE knowledge MATCH ? ORDER BY score LIMIT 6", (match,))
     return [{"source": r["source"], "id": r["record_id"], "data": json.loads(r["content"])} for r in rows]
-

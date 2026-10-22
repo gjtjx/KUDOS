@@ -1,5 +1,7 @@
 """Display translations only; original CSV values and database records stay unchanged."""
 INPUT_PAIRS = {
+    "醫院": "医院", "診所": "诊所", "就診": "就诊", "看診": "看诊", "就醫": "就医",
+    "報到": "报到", "來": "来", "步驟": "步骤", "準備": "准备", "電話": "电话",
     "預約": "预约", "醫生": "医生", "體檢": "体检", "健康檢查": "体检", "皮膚": "皮肤",
     "關節": "关节", "諮詢": "咨询", "過敏": "过敏", "兒童": "儿童",
     "幫": "帮", "查詢": "查询", "放棄": "放弃", "確認": "确认",
@@ -54,4 +56,3 @@ def localized_booking(row):
     return {**row, "treatment_name_zh": TRANSLATIONS.get(row["treatment_id"], {}).get("treatment_name", ""),
             "pre_treatment_instructions_zh": TRANSLATIONS.get(row["treatment_id"], {}).get("pre_treatment_instructions", ""),
             "status_label": STATUS.get(row["status"], row["status"])}
-

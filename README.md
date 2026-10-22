@@ -2,6 +2,8 @@
 
 介面與固定回覆現採繁體中文／English 對照。 / The interface and fixed replies use paired Traditional Chinese and English.
 
+維護、備份還原與排錯 / Maintenance, backup/restore and troubleshooting: [MAINTENANCE.md](MAINTENANCE.md).
+
 完整需求與現況核對 / Full requirements and status review: [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md).
 
 A runnable clinic assistant take-home MVP: React workbench, FastAPI, SQLite, grounded catalog retrieval, conversational booking and a configurable LLM function-calling adapter.
@@ -48,7 +50,7 @@ LLM_API_KEY=your-api-key
 
 Choose a model that supports Chat Completions function calling and strict tool schemas. Model access is provider/account dependent; no model or key is assumed. Restart the backend. The UI badge must say LLM.
 
-The LLM dynamically routes intent and extracts booking fields with the `route_intent` function schema. The host executes the corresponding retrieval or REST tool, validates every booking, and derives confirmation directly from the saved record. For knowledge questions, retrieved records and patient context ground a second model call.
+Recognized visit-process questions use a grounded host-side guide in either mode. Other questions in LLM mode dynamically route intent and extracts booking fields with the `route_intent` function schema. The host executes the corresponding retrieval or REST tool, validates every booking, and derives confirmation directly from the saved record. For knowledge questions, retrieved records and patient context ground a second model call.
 
 Only LLM mode transmits conversation, mock patient profile/history, bookings and catalog context to the configured provider. Never commit `.env`. Provider errors return an explicit retryable error, not a silently simulated LLM response.
 
@@ -56,7 +58,9 @@ Only LLM mode transmits conversation, mock patient profile/history, bookings and
 
 Use future dates relative to the demo day; all times are local to the selected clinic.
 
-1. Ask **“我有花生过敏，可以咨询谁？”**. The local answer references the allergy history, explains that the catalog has no dedicated allergy service, and identifies the general practitioner. Evidence labels show CSV and record IDs.
+Before booking, try **“我到医院的流程”** / **“What should I expect when visiting the clinic?”** for a bilingual visit guide with current booking details. Unspecified on-site procedures are explicitly marked for clinic confirmation.
+
+1. Ask **“我有花生過敏，可以諮詢誰？”**. The local answer references the allergy history, explains that the catalog has no dedicated allergy service, and identifies the general practitioner. Evidence labels show CSV and record IDs.
 2. Ask **“What are the clinic cancellation policies?”** or **“I have a skin rash. What service is available?”**.
 3. Ask **“When is my next appointment?”**. This reads current patient bookings via GET /api/bookings; only future Confirmed appointments are considered for “next”.
 4. Start a new conversation and say **“I want to book an appointment”**.
@@ -78,12 +82,17 @@ Local mode supports doctor IDs/names, treatment IDs/basic names, YYYY-MM-DD, “
 
 Reuse the same request ID and payload when retrying. Reusing it for different content returns 409. Validation failures return 422; database failure 503; model failure 502. The UI keeps the original request ID for retries after network errors.
 
-## Tests
+## Tests / 測試
 
 ```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
 $env:PYTHONPATH="backend"
-.\.venv\Scripts\python.exe -m unittest discover -s backend/tests -v
+$env:AI_MODE="local"
+.\.venv\Scripts\python.exe -m coverage run -m unittest discover -s backend/tests -v
+.\.venv\Scripts\python.exe -m coverage report
 cd frontend
+npm.cmd ci
+npm.cmd run test:coverage
 npm.cmd run build
 ```
 
@@ -94,6 +103,7 @@ Tests create their own temporary SQLite files under runtime/tests. They do not w
 - backend/app/db.py: schema, seed, session storage.
 - backend/app/knowledge.py: FTS5/BM25 retrieval and bilingual query expansion.
 - backend/app/agent.py: intent routing, multi-turn workflow, LLM adapter and REST tools.
+- backend/app/answers.py: concise grounded answers, visit orientation and timezone-aware upcoming booking order.
 - backend/app/main.py: validated API endpoints, persistence and frontend serving.
 - frontend/src/: React chat, evidence and live bookings.
 - mock-data/: all six original CSV datasets.
@@ -108,4 +118,3 @@ Real model calls need your own configured credentials. The default demo and mock
 Docker is included as an optional path: `docker compose up --build`. It has not been exercised on this machine. The volume persists the database.
 
 Submission repository: https://github.com/gjtjx/KUDOS. The source excludes .env, .venv, runtime, node_modules and dist (covered by .gitignore); package-lock.json is included. The local delivery also contains prebuilt frontend assets, so start.cmd can use an existing compatible Python environment without rebuilding.
-

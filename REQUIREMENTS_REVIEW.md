@@ -70,5 +70,4 @@ Patient question → grounded clinic/doctor/service retrieval → suitable servi
 
 UI labels, controls, empty/error states, fixed replies, booking statuses, service names and preparation instructions are paired in Traditional Chinese and English. Original CSV records, proper names, addresses and identifiers are preserved. Simplified Chinese, Traditional Chinese and English inputs remain supported. Live bilingual model output remains to be verified.
 
-目前 17 項後端測試通過，包含新加的繁體意圖識別、繁體服務選擇、雙語來源、錯誤提示與 LLM 語言指令測試。 / 17 backend tests pass, including new bilingual workflow coverage.
-
+目前功能的單元、整合及前端元件測試對照，見 MAINTENANCE.md；實測數量與覆蓋率見 VALIDATION.md。新增就診流程為本次改善，不把資料缺少的院內規定宣稱為原始需求已提供。 / See MAINTENANCE.md for feature-to-test mapping and VALIDATION.md for measured results. Visit orientation is an added improvement; missing on-site policies are not treated as supplied facts.
