@@ -39,6 +39,7 @@ Current results include the fixes found during the fresh-clone review; the earli
 | 真實核心流程 / Live core flow | [live_acceptance.py](scripts/live_acceptance.py) | 真實供應商、REST／SQL、持久化與追蹤 / End-to-end provider acceptance |
 | 真實額外情境 / Live edge cases | [expanded_acceptance.py](scripts/expanded_acceptance.py) | 暫緩、撤回、歧義、引用與摘要 / Expanded behavioral cases |
 | 常見問法 / Common questions | [common_questions_acceptance.py](scripts/common_questions_acceptance.py) | 16 scenarios / 20 turns; inspect response content as well as assertions |
+| 擴大情境 / Diverse scenarios | [diverse_questions_acceptance.py](scripts/diverse_questions_acceptance.py) | 64 scenarios / 83 turns; [results and open findings](DIVERSE_QUESTIONS_REPORT.md) |
 
 單元／整合測試中的受控模型輸出驗證應用邏輯；真實模型測試另外驗證供應商與實際語言行為，兩者不可互相替代。
 Mocked contracts and live-provider evidence answer different questions.

@@ -4,7 +4,9 @@
 
 ## 1. 結論 / Decision
 
-**可以作為本機演示的 take-home MVP 提交。 / Ready to submit as a locally demonstrated take-home MVP.** Required knowledge retrieval, patient context, multi-turn collection, REST booking persistence and React booking-list updates were exercised. Configure a valid provider key for the full natural-language and transcript demonstration; a fresh checkout defaults to limited local mode.
+**後續擴大測試 / Follow-up broad review:** [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md) retain open answer-quality findings: an overbroad claim from incomplete retrieved evidence, intermittent extra-confirmation wording and formatting/name-localization issues. Mechanical passes must not be interpreted as all response content being correct. This qualifies the bounded submission assessment below.
+
+**暫緩直接提交，先修正擴大測試發現的英文預約執行失敗。 / Withhold direct submission until the English booking execution failure found in the broader review is fixed.** The earlier bounded review exercised required knowledge retrieval, patient context, multi-turn collection, REST booking persistence and React booking-list updates, but did not expose the later failure. Configure a valid provider key for the full natural-language and transcript demonstration; a fresh checkout defaults to limited local mode.
 
 This is a bounded review, not a guarantee for every model response. Cloud CI, container execution and Kubernetes cluster execution are not verified. Authentication, existing-booking cancellation/rescheduling, vector embeddings and audio transcription are outside the implemented scope; see [README.md](README.md).
 

@@ -187,6 +187,8 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 **2026-10-23 提交前複核通過。** 從公開 GitHub 乾淨副本完成安裝、建置、隔離啟動與瀏覽器演示，詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
 **Submission review passed on October 23, 2026**, using a fresh public clone and isolated runtime.
 
+**後續 64 場景測試發現未解決問題：**完整英文預約偶發停留於草稿，另有新增後查詢的矛盾措辭；暫不應將先前有限驗收解讀為可以無條件提交。 / The later 64-scenario review found an unresolved English booking execution failure and a contradictory follow-up answer. See [the findings](DIVERSE_QUESTIONS_REPORT.md) before submission.
+
 | 驗證 / Validation | 結果 / Result |
 |---|---|
 | 後端單元／整合測試 / Backend tests | 110 passed |
@@ -195,6 +197,7 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 | DeepSeek 完整流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
 | DeepSeek 暫緩／撤回 / Hold and withdrawal cases | 27/27 checks, 2026-10-23 |
 | 常見問法 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations in the review report |
+| 擴大情境 / Diverse scenarios | [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md); mechanical results and open response-quality findings are reported separately |
 | Poe Sonnet 歷史對照 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun in this review |
 
 本次發現並修正本機詞彙檢索噪聲及模型對「確認醫生／服務」的過度暫緩；中間失敗報告保留。這是有限案例驗收，不是通用模型排名。雲端 CI 與容器／叢集執行仍未驗收。
