@@ -10,6 +10,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +18,7 @@ from .db import Database
 from .models import ChatInput, BookingInput
 from .knowledge import MATCHES
 from .agent import Agent
+from .localization import TRANSLATIONS, localized_booking
 
 ROOT = Path(__file__).resolve().parents[2]
 try:
@@ -39,7 +41,12 @@ def create_app(db_path=None, data_dir=None):
     @app.exception_handler(sqlite3.Error)
     async def database_error(request, error):
         logging.error("Database operation failed: %s", type(error).__name__)
-        return JSONResponse(status_code=503, content={"detail": "Database unavailable; no success has been reported. Retry the same request."})
+        return JSONResponse(status_code=503, content={"detail": "資料庫暫時無法使用，未發出成功確認，請重試相同請求。 / Database unavailable; no success has been reported. Retry the same request."})
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request, error):
+        fields = ", ".join(".".join(str(p) for p in e["loc"][1:]) for e in error.errors())
+        return JSONResponse(status_code=422, content={"detail": "欄位格式不正確，請檢查 / Invalid fields; please check: " + fields})
 
     @app.get("/api/health")
     def health():
@@ -47,21 +54,22 @@ def create_app(db_path=None, data_dir=None):
 
     @app.get("/api/profile")
     def profile():
-        return db.profile()
+        return {**db.profile(), "known_allergies_zh": "青黴素、花生"}
 
     @app.get("/api/catalog")
     def catalog():
-        return {t: db.rows("SELECT * FROM " + t) for t in ("clinics", "doctors", "treatments")}
+        return {t: [{**row, "zh": TRANSLATIONS.get(row[{"clinics": "clinic_id", "doctors": "doctor_id", "treatments": "treatment_id"}[t]], {})}
+                    for row in db.rows("SELECT * FROM " + t)] for t in ("clinics", "doctors", "treatments")}
 
     def booking_row(booking_id):
         result = db.rows(BOOKING_SQL + " WHERE b.booking_id=?", (booking_id,))[0]
-        return {**result, "timezone": TIMEZONES[result["clinic_id"]]}
+        return localized_booking({**result, "timezone": TIMEZONES[result["clinic_id"]]})
 
     @app.get("/api/bookings")
     def bookings(patient_id: str = "P001"):
         if patient_id != "P001":
-            raise HTTPException(403, "This demo is scoped to patient P001")
-        return [{**b, "timezone": TIMEZONES[b["clinic_id"]]} for b in db.rows(BOOKING_SQL + " WHERE b.patient_id=? ORDER BY b.booking_date,b.booking_time,b.booking_id", (patient_id,))]
+            raise HTTPException(403, "本示範僅供患者 P001 使用。 / This demo is scoped to patient P001")
+        return [localized_booking({**b, "timezone": TIMEZONES[b["clinic_id"]]}) for b in db.rows(BOOKING_SQL + " WHERE b.patient_id=? ORDER BY b.booking_date,b.booking_time,b.booking_id", (patient_id,))]
 
     @app.post("/api/bookings")
     def book(body: BookingInput):
@@ -72,20 +80,20 @@ def create_app(db_path=None, data_dir=None):
             previous = c.execute("SELECT * FROM booking_keys WHERE id=?", (body.request_id,)).fetchone()
             if previous:
                 if previous["payload"] != payload:
-                    raise HTTPException(409, "Request ID already used for different booking details")
+                    raise HTTPException(409, "此請求編號已用於不同預約內容。 / Request ID already used for different booking details")
                 ident = previous["booking_id"]
             else:
                 doctors = db.rows("SELECT * FROM doctors WHERE doctor_id=?", (body.doctor_id,))
                 if not doctors or body.treatment_id not in MATCHES:
-                    raise HTTPException(422, "Unknown doctor or treatment ID")
+                    raise HTTPException(422, "醫生或服務編號不存在。 / Unknown doctor or treatment ID")
                 if body.doctor_id not in MATCHES[body.treatment_id]:
-                    raise HTTPException(422, "Doctor and treatment do not match. Select a doctor with the corresponding specialty.")
+                    raise HTTPException(422, "醫生與服務不符，請選擇對應專科的醫生。 / Doctor and treatment do not match. Select a doctor with the corresponding specialty.")
                 if body.treatment_id == "T002":
-                    raise HTTPException(422, "P001 is an adult. Pediatric vaccination is not available in this single-patient demo.")
+                    raise HTTPException(422, "P001 為成人，本示範不提供兒童疫苗預約。 / P001 is an adult. Pediatric vaccination is not available in this single-patient demo.")
                 zone = ZoneInfo(TIMEZONES[doctors[0]["clinic_id"]])
                 when = datetime.combine(body.booking_date, body.booking_time).replace(tzinfo=zone)
                 if when <= datetime.now(zone):
-                    raise HTTPException(422, "Choose a future date and time in the clinic's local timezone.")
+                    raise HTTPException(422, "請選擇診所當地時區的未來日期與時間。 / Choose a future date and time in the clinic's local timezone.")
                 ident = "B" + uuid.uuid4().hex[:12].upper()
                 c.execute("INSERT INTO patient_bookings VALUES(?,?,?,?,?,?,?,?)",
                           (ident,"P001",body.doctor_id,body.treatment_id,str(body.booking_date),body.booking_time.isoformat(),"Confirmed",body.notes))
@@ -101,14 +109,14 @@ def create_app(db_path=None, data_dir=None):
             prior = db.rows("SELECT * FROM requests WHERE id=?", (key,))
             if prior:
                 if prior[0]["payload"] != payload:
-                    raise HTTPException(409, "Request ID already used for another message")
+                    raise HTTPException(409, "此請求編號已用於另一則訊息。 / Request ID already used for another message")
                 return json.loads(prior[0]["response"])
             state = db.state(body.session_id)
             try:
                 response = await app.state.agent.run(body.message, state, key)
             except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as error:
                 logging.warning("Agent failed: %s", type(error).__name__)
-                raise HTTPException(502, "AI service could not complete the request. Please retry; no booking confirmation was issued.") from error
+                raise HTTPException(502, "AI 服務未能完成請求，未發出預約確認，請重試。 / AI service could not complete the request. Please retry; no booking confirmation was issued.") from error
             response["session_id"] = body.session_id
             response["latency_ms"] = round((time.monotonic() - started) * 1000)
             db.save(body.session_id, state, key, payload, response)

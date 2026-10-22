@@ -1,5 +1,9 @@
 # Validation — 2026-10-22
 
+## Bilingual update / 繁英對照更新
+
+17 backend tests passed after the Traditional Chinese / English update. Added coverage for Traditional Chinese intent routing, service selection, bilingual retrieved facts, booking labels, validation messages and LLM output-language instructions. React production build also passed. A browser check on an isolated database verified the Traditional Chinese booking suggestion, bilingual missing-field prompt, bilingual booking confirmation/preparation/allergy reminder and list update from 2 to 3 records. Original CSV values remain unchanged; translations are display metadata. Live LLM output remains unverified without provider credentials.
+
 ## Automated acceptance
 
 15 unittest cases passed against isolated SQLite databases, using Python 3.13 and the pinned FastAPI/httpx/Pydantic versions.

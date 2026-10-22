@@ -49,7 +49,7 @@ class AppTests(unittest.TestCase):
     def test_retrieval_citations_and_allergies(self):
         r = self.chat("我有花生过敏，可以咨询谁？").json()
         self.assertEqual(r["intent"], "knowledge")
-        self.assertIn("没有专门的过敏", r["reply"])
+        self.assertIn("沒有專門的過敏", r["reply"])
         self.assertTrue(r["sources"])
         self.assertIn("D101",r["reply"])
         self.assertTrue(retrieve(self.app.state.db,"rash"))
@@ -133,6 +133,31 @@ class AppTests(unittest.TestCase):
         self.assertEqual(r["mode"],"llm")
         self.assertIsNotNone(r["booking"])
         self.assertTrue(model.call_args.args[1])
+
+    def test_traditional_chinese_workflow_and_bilingual_sources(self):
+        question = self.chat("我有花生過敏，可以諮詢誰？").json()
+        self.assertIn("目錄沒有專門", question["reply"])
+        self.assertIn("no dedicated allergy", question["reply"])
+        self.assertIn("服務 / Treatment", question["reply"])
+        self.assertEqual(self.chat("我的下一次預約是甚麼時候？").json()["intent"], "bookings")
+        self.chat("幫我預約 D101 的一般健康檢查")
+        result = self.chat("2035-11-08 09:30").json()
+        self.assertIn("預約已儲存 / Booking confirmed", result["reply"])
+        self.assertIn("一般健康檢查 / General Health Checkup", result["reply"])
+        self.assertEqual(result["booking"]["treatment_name"], "General Health Checkup")
+        self.assertEqual(result["booking"]["status_label"], "已確認 / Confirmed")
+        self.assertIn("空腹 8 小時", result["booking"]["pre_treatment_instructions_zh"])
+        self.assertIn("欄位格式不正確", self.client.post("/api/bookings",json=self.booking(booking_time="25:00")).json()["detail"])
+
+    def test_traditional_retrieval_and_llm_language_instruction(self):
+        self.assertTrue(retrieve(self.app.state.db, "皮膚過敏"))
+        catalog = self.client.get("/api/catalog").json()
+        self.assertEqual(catalog["doctors"][0]["zh"]["specialty"], "全科")
+        self.app.state.agent.mode = "llm"
+        route = {"tool_calls":[{"function":{"name":"route_intent","arguments":json.dumps({"intent":"knowledge"})}}]}
+        with patch.object(self.app.state.agent, "llm", AsyncMock(side_effect=[route, {"content":"診所資訊 / Clinic information"}])) as model:
+            self.chat("診所營業時間")
+            self.assertIn("paired Traditional Chinese", model.call_args_list[1].args[0][0]["content"])
 
     def test_llm_failure_never_reports_success(self):
         self.app.state.agent.mode="llm"

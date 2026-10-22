@@ -1,5 +1,6 @@
 import json
 import re
+from .localization import normalize_input
 
 # Explainable bilingual query expansion; catalog records remain the source of facts.
 EXPANSIONS = {
@@ -16,6 +17,7 @@ EXPANSIONS = {
 MATCHES = {"T001": ["D101"], "T002": ["D102"], "T003": ["D103"], "T004": ["D101", "D102"], "T005": ["D104"]}
 
 def retrieve(db, query):
+    query = normalize_input(query)
     expanded = query
     for pattern, terms in EXPANSIONS.items():
         if re.search(pattern, query, re.I):

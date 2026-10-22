@@ -9,6 +9,16 @@ async function api(path, options={}) {
   return body;
 }
 const uuid=()=>crypto.randomUUID();
+const slotLabels={doctor_id:'醫生 / Doctor',treatment_id:'服務 / Treatment',booking_date:'日期 / Date',booking_time:'時間 / Time'};
+const intentLabels={knowledge:'知識查詢 / Knowledge',bookings:'預約查詢 / Booking history',book:'建立預約 / New booking',cancel_draft:'取消草稿 / Cancel draft'};
+const suggestions=[
+  ['我有花生過敏，可以諮詢誰？','Who can I consult about my peanut allergy?'],
+  ['我的下一次預約是甚麼時候？','When is my next appointment?'],
+  ['幫我預約 D101 的 T001 體檢','Book a T001 checkup with D101'],
+  ['診所的取消政策是甚麼？','What are the clinic cancellation policies?']
+];
+function Pair({zh,en}){return <><span lang="zh-Hant">{zh}</span><span className="translation" lang="en">{en}</span></>}
+function errorText(e){return e.name==='TimeoutError'?'請求逾時，請重試。 / Request timed out. Please retry.':e.message==='Failed to fetch'?'無法連接伺服器，請檢查後端是否運行。 / Cannot connect to the server. Check that the backend is running.':e.message}
 function App(){
   const [session,setSession]=useState(()=>localStorage.getItem('clinic-session')||uuid());
   const [messages,setMessages]=useState([]);
@@ -23,9 +33,9 @@ function App(){
   const [catalog,setCatalog]=useState(null);
   const bottom=useRef(null);
   useEffect(()=>{localStorage.setItem('clinic-session',session)},[session]);
-  useEffect(()=>{Promise.all([api('/profile'),api('/health'),api('/catalog'),api('/bookings')]).then(([p,h,c,b])=>{setProfile(p);setHealth(h);setCatalog(c);setBookings(b)}).catch(e=>setError(e.message))},[]);
+  useEffect(()=>{Promise.all([api('/profile'),api('/health'),api('/catalog'),api('/bookings')]).then(([p,h,c,b])=>{setProfile(p);setHealth(h);setCatalog(c);setBookings(b)}).catch(e=>setError(errorText(e)))},[]);
   useEffect(()=>{bottom.current?.scrollIntoView({behavior:'smooth',block:'nearest'})},[messages,busy]);
-  async function refresh(){try{setBookings(await api('/bookings'));setError('')}catch(e){setError('刷新预约失败：'+e.message)}}
+  async function refresh(){try{setBookings(await api('/bookings'));setError('')}catch(e){setError('重新整理預約失敗 / Could not refresh bookings: '+errorText(e))}}
   async function send(text=input, pending=null){
     if(busy||!text.trim())return;
     const request=pending||{message:text.trim(),session_id:session,request_id:uuid()};
@@ -34,31 +44,31 @@ function App(){
     try{
       const data=await api('/chat',{method:'POST',body:JSON.stringify(request)});
       setMessages(m=>[...m,{role:'assistant',text:data.reply,...data}]);setDraft(data.draft);
-      try{setBookings(await api('/bookings'))}catch(e){setError('对话已完成，但预约列表刷新失败，请点击刷新。')}
-    }catch(e){setError(e.message);setRetry(request)}
+      try{setBookings(await api('/bookings'))}catch(e){setError('對話已完成，但預約列表更新失敗，請按重新整理。 / Chat completed, but bookings could not refresh. Please refresh the list.')}
+    }catch(e){setError(errorText(e));setRetry(request)}
     finally{setBusy(false)}
   }
   function reset(){setSession(uuid());setMessages([]);setDraft({});setRetry(null);setError('')}
   return <div className="app">
-    <header><div className="brand"><span className="logo">＋</span><div><h1>ClinicPilot <span>AI</span></h1><p>Care starts with a conversation</p></div></div><span className="mode">{health?.mode==='llm'?'LLM · 模型工具调用':health?'LOCAL · 本地演示':'连接中…'}</span></header>
-    <div className="intro"><div><span className="eyebrow">PATIENT WORKBENCH</span><h2>让下一次就诊，更简单。</h2><p>了解诊所与医生、寻找合适的服务，并在对话中完成预约。</p></div><div className="patient"><b>{profile?profile.first_name+' '+profile.last_name:'载入患者…'}</b><span>固定演示患者 · P001</span><small>已知过敏：{profile?.known_allergies||'—'}</small></div></div>
+    <header><div className="brand"><span className="logo">＋</span><div><h1>ClinicPilot <span>AI</span></h1><p>關懷，從對話開始 · Care starts with a conversation</p></div></div><span className="mode">{health?.mode==='llm'?'LLM · 模型工具呼叫 / Model tools':health?'LOCAL · 本機示範 / Local demo':'連線中 / Connecting…'}</span></header>
+    <div className="intro"><div><span className="eyebrow">患者工作台 / PATIENT WORKBENCH</span><h2><Pair zh="讓下一次就診，更簡單。" en="Your next visit, made simpler."/></h2><p><Pair zh="了解診所與醫生、尋找合適的服務，並在對話中完成預約。" en="Explore clinics, doctors and services. Book through conversation."/></p></div><div className="patient"><b>{profile?profile.first_name+' '+profile.last_name:'載入患者 / Loading patient…'}</b><span>固定示範患者 / Demo patient · P001</span><small>已知過敏 / Allergies：{profile?.known_allergies_zh||'—'} / {profile?.known_allergies||'—'}</small></div></div>
     <main>
-      <section className="panel chat"><div className="panel-title"><div><h3>就诊助手</h3><span>Clinic assistant</span></div><button disabled={busy} onClick={reset}>新对话</button></div>
+      <section className="panel chat"><div className="panel-title"><div><h3>就診助手</h3><span>Clinic assistant</span></div><button disabled={busy} onClick={reset}>新對話 / New chat</button></div>
         <div className="messages" aria-live="polite">
-          {!messages.length&&<div className="welcome"><div className="bot-icon">✦</div><h3>你好，John。</h3><p>可以先询问服务，或告诉我想预约的医生和时间。</p><div className="suggestions">{['我有花生过敏，可以咨询谁？','When is my next appointment?','帮我预约 D101 的 T001 体检','What are the clinic cancellation policies?'].map(q=><button disabled={busy} key={q} onClick={()=>send(q)}>{q}<span>↗</span></button>)}</div></div>}
-          {messages.map((m,i)=><article key={i} className={'message '+m.role}><span className="who">{m.role==='user'?'YOU':'CLINICPILOT'}</span><div className="bubble">{m.text}</div>{m.sources?.length>0&&<div className="sources">{m.sources.map(s=><span key={s.id}>{s.source} · {s.id}</span>)}</div>}{m.tool_trace&&<details><summary>{m.mode==='local'?'本地规则':'LLM'} · {m.intent} · {m.latency_ms} ms · 查看调用记录</summary>{m.tool_trace.map((t,j)=><div key={j}>{t.tool} → {t.status}{t.booking_id?' · '+t.booking_id:''}</div>)}</details>}</article>)}
-          {busy&&<p className="thinking" role="status">正在处理，请稍候…</p>}<div ref={bottom}/>
+          {!messages.length&&<div className="welcome"><div className="bot-icon">✦</div><h3><Pair zh="你好，John。" en="Hello, John."/></h3><p><Pair zh="可先查詢服務，或告訴我想預約的醫生與時間。" en="Ask about a service, or tell me your preferred doctor and time."/></p><div className="suggestions">{suggestions.map(([zh,en])=><button disabled={busy} key={en} onClick={()=>send(zh)}><span><Pair zh={zh} en={en}/></span><span aria-hidden="true">↗</span></button>)}</div></div>}
+          {messages.map((m,i)=><article key={i} className={'message '+m.role}><span className="who">{m.role==='user'?'你 / YOU':'CLINICPILOT'}</span><div className="bubble">{m.text}</div>{m.sources?.length>0&&<div className="sources">{m.sources.map(s=><span key={s.id}>{s.source} · {s.id}</span>)}</div>}{m.tool_trace&&<details><summary>{m.mode==='local'?'本機規則 / Local rules':'LLM'} · {intentLabels[m.intent]||m.intent} · {m.latency_ms} ms · 查看呼叫紀錄 / Tool trace</summary>{m.tool_trace.map((t,j)=><div key={j}>{t.tool} → {t.status==='ok'?'成功 / OK':t.status==='rejected'?'已拒絕 / Rejected':t.status}{t.booking_id?' · '+t.booking_id:''}</div>)}</details>}</article>)}
+          {busy&&<p className="thinking" role="status">正在處理，請稍候… / Working on your request…</p>}<div ref={bottom}/>
         </div>
-        {Object.keys(draft).length>0&&<div className="draft"><b>预约草稿</b>{['doctor_id','treatment_id','booking_date','booking_time'].map(k=><span key={k}>{k.replace('booking_','')}: {draft[k]||'待填写'}</span>)}</div>}
-        {error&&<div role="alert" className="error">{error}{retry&&<button disabled={busy} onClick={()=>send(retry.message,retry)}>重试同一请求</button>}</div>}
-        <form onSubmit={e=>{e.preventDefault();send()}}><label className="sr-only" htmlFor="message">输入消息</label><textarea id="message" placeholder="输入消息，例如：2030-11-08，上午 9:30" value={input} onChange={e=>setInput(e.target.value)} maxLength={4000} disabled={busy} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send()}}}/><button className="send" disabled={busy||!input.trim()} type="submit">发送 ↑</button></form>
-        <p className="footnote">服务导航与预约演示，不提供诊断或处方。时间按所选诊所当地时区记录。</p>
+        {Object.keys(draft).length>0&&<div className="draft"><b>預約草稿 / Booking draft</b>{['doctor_id','treatment_id','booking_date','booking_time'].map(k=><span key={k}>{slotLabels[k]}: {draft[k]||'待填寫 / Required'}</span>)}</div>}
+        {error&&<div role="alert" className="error">{error}{retry&&<button disabled={busy} onClick={()=>send(retry.message,retry)}>重試 / Retry request</button>}</div>}
+        <form onSubmit={e=>{e.preventDefault();send()}}><label className="sr-only" htmlFor="message">輸入訊息 / Message</label><textarea id="message" placeholder="輸入訊息 / Message — 2035-11-08, 09:30" value={input} onChange={e=>setInput(e.target.value)} maxLength={4000} disabled={busy} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send()}}}/><button className="send" disabled={busy||!input.trim()} type="submit">傳送 / Send ↑</button></form>
+        <p className="footnote">服務導覽與預約示範，不提供診斷或處方。時間採診所當地時區。 / Service navigation and booking demo, not diagnosis or prescribing. Times use the clinic’s local timezone.</p>
       </section>
-      <aside><section className="panel"><div className="panel-title"><div><h3>我的预约</h3><span>来自数据库 · {bookings.length} 条</span></div><button onClick={refresh}>刷新</button></div><div className="bookings">{bookings.length?bookings.map(b=><article className="booking" key={b.booking_id}><span className="status">{b.status}</span><h4>{b.treatment_name}</h4><p>{b.doctor_name}</p><strong>{b.booking_date} · {b.booking_time.slice(0,5)}</strong><small>{b.clinic_name} · {b.timezone}</small><small className="id">{b.booking_id}</small></article>):<p className="empty">暂无预约，或正在载入。</p>}</div></section>
-      <section className="panel guide"><span className="eyebrow">HOW IT WORKS</span><h3>三步完成预约</h3><ol><li>选择医生和服务</li><li>提供日期与当地时间</li><li>信息齐全后自动保存，右侧即时更新</li></ol><p>本地模式支持医生姓名或编号、服务名称或编号；日期建议使用 YYYY-MM-DD。</p></section>
-      {catalog&&<details className="panel catalog"><summary>查看医生与服务目录</summary>{catalog.doctors.map(d=><p key={d.doctor_id}><b>{d.doctor_id} · {d.full_name}</b><br/>{d.specialty} · consultation ${d.consultation_fee_usd}</p>)}{catalog.treatments.map(t=><p key={t.treatment_id}>{t.treatment_id} · {t.treatment_name}<br/>${t.price_usd} · {t.duration_minutes} min</p>)}</details>}
+      <aside><section className="panel"><div className="panel-title"><div><h3>我的預約 / My bookings</h3><span>資料庫紀錄 / Database records · {bookings.length}</span></div><button onClick={refresh}>重新整理 / Refresh</button></div><div className="bookings">{bookings.length?bookings.map(b=><article className="booking" key={b.booking_id}><span className="status">{b.status_label||b.status}</span><h4><Pair zh={b.treatment_name_zh||b.treatment_name} en={b.treatment_name}/></h4><p>{b.doctor_name}</p><strong>{b.booking_date} · {b.booking_time.slice(0,5)}</strong><small>{b.clinic_name} · {b.timezone}</small><small className="id">{b.booking_id}</small></article>):<p className="empty">暫無預約，或正在載入。 / No bookings, or still loading.</p>}</div></section>
+      <section className="panel guide"><span className="eyebrow">使用方式 / HOW IT WORKS</span><h3>三步完成預約 / Book in three steps</h3><ol><li><Pair zh="選擇醫生與服務" en="Choose a doctor and treatment"/></li><li><Pair zh="提供日期與當地時間" en="Provide a date and local time"/></li><li><Pair zh="資訊齊全後自動儲存，預約列表即時更新" en="Complete details are saved; the bookings list updates"/></li></ol><p>本機模式支援醫生及服務名稱或編號；日期建議使用 YYYY-MM-DD。 / Local mode accepts doctor and service names or IDs. Use YYYY-MM-DD for dates.</p></section>
+      {catalog&&<details className="panel catalog"><summary>查看醫生與服務目錄 / Doctors & services</summary>{catalog.doctors.map(d=><p key={d.doctor_id}><b>{d.doctor_id} · {d.full_name}</b><br/>{d.zh?.specialty} / {d.specialty} · 診金 / Consultation ${d.consultation_fee_usd}</p>)}{catalog.treatments.map(t=><p key={t.treatment_id}>{t.treatment_id} · {t.zh?.treatment_name} / {t.treatment_name}<br/>${t.price_usd} · {t.duration_minutes} 分鐘 / min</p>)}</details>}
       </aside>
-    </main><footer>CLINICPILOT AI · Take-home MVP <span>React / FastAPI / SQLite</span></footer>
+    </main><footer>CLINICPILOT AI · 作業原型 / Take-home MVP <span>React / FastAPI / SQLite</span></footer>
   </div>;
 }
 createRoot(document.getElementById('root')).render(<App/>);

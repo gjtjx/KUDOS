@@ -1,5 +1,9 @@
 # ClinicPilot AI
 
+介面與固定回覆現採繁體中文／English 對照。 / The interface and fixed replies use paired Traditional Chinese and English.
+
+完整需求與現況核對 / Full requirements and status review: [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md).
+
 A runnable clinic assistant take-home MVP: React workbench, FastAPI, SQLite, grounded catalog retrieval, conversational booking and a configurable LLM function-calling adapter.
 
 ## Quick start on Windows
