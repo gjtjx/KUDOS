@@ -1,29 +1,70 @@
-> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
-
 # ClinicPilot AI
 
-介面與固定回覆現採繁體中文／English 對照。 / The interface and fixed replies use paired Traditional Chinese and English.
+**讓每一次複診，更輕鬆。 / Making every follow-up visit easier.**
 
-維護、備份還原與排錯 / Maintenance, backup/restore and troubleshooting: [MAINTENANCE.md](MAINTENANCE.md).
+診所助理作業專案：以對話查詢診所與服務、了解現有預約，並收集醫生、服務、日期與時間，完成可持久保存的預約。介面與固定回覆採繁體中文／English 對照。
 
-完整需求與現況核對 / Full requirements and status review: [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md).
+A clinic assistant take-home project for grounded service Q&A, existing appointment lookup and conversational booking. It combines a React interface, FastAPI, SQLite and a configurable LLM adapter, with paired Traditional Chinese and English interface text and fixed replies.
 
-A runnable clinic assistant take-home MVP: React workbench, FastAPI, SQLite, grounded catalog retrieval, conversational booking and a configurable LLM function-calling adapter.
+**技術 / Stack:** React · Vite · FastAPI · SQLite FTS5 · Responses / Chat Completions
 
-## Quick start on Windows
+## 導覽 / Contents
 
-Requirements: Python 3.10+ (tested with 3.13), Node.js 22.12+ and npm. Initial dependency installation needs internet.
+- [核心功能 / Features](#features)
+- [快速開始 / Quick start](#quick-start)
+- [模型設定 / Model configuration](#model-configuration)
+- [架構與原理 / Architecture](#architecture)
+- [示範流程 / Demo walkthrough](#demo)
+- [測試與驗證 / Testing](#testing)
+- [部署與限制 / Deployment and scope](#deployment-and-scope)
+- [API 與專案結構 / API and source map](#api-and-source-map)
+- [文件索引 / Documentation](#documentation)
 
-1. Double-click `setup.cmd` (creates a project-local virtual environment, installs pinned dependencies, builds React).
-2. Double-click `start.cmd`.
-3. Open http://127.0.0.1:8000. Interactive API documentation: http://127.0.0.1:8000/docs.
-4. Keep the server window open. Ctrl+C stops the server.
+<a id="features"></a>
+## 核心功能 / Features
 
-The first startup creates `runtime/clinic.db` and seeds all six supplied CSVs. Subsequent startups preserve bookings and conversation state. No separate database server is needed. Port 8000 must be free.
+| 功能 / Feature | 實作內容 / Implementation |
+|---|---|
+| 知識問答 / Grounded Q&A | 查詢診所、醫生、療程與政策，附資料來源與記錄 ID。 / Answers from catalog records with source labels and record IDs. |
+| 個人化引導 / Personalized guidance | 使用固定模擬病人 P001 的過敏、病史與預約資訊。 / Uses the predefined mock patient's allergies, history and appointments. |
+| 多輪預約 / Conversational booking | 收集、修正或撤回醫生、服務、日期及時間；中途問答保留草稿，明確暫停提交時等待確認。 / Collects and updates booking fields, preserves drafts across questions and respects requests to wait. |
+| 真實資料寫入 / Persistent appointments | 經 REST 驗證並寫入 SQLite；請求重試去重，前端更新預約列表。 / Validated REST writes, retry deduplication and refreshed booking lists. |
+| 文字逐字稿摘要 / Transcript summary | 主訴、診斷、用藥及醫囑四欄摘要，附原文引句；未提及內容為 null。 / Four fields with verbatim evidence; missing information remains null. |
+| 模型追蹤 / LLM tracing | 記錄請求、模型呼叫、耗時、Token、快取與安全錯誤分類。 / Persistent request and model-call metadata, latency, token usage, caching and safe error categories. |
 
-Default `AI_MODE=local` is an explicitly labelled deterministic demo: lexical retrieval plus bilingual intent/slot rules and templated grounded answers. It is not a live LLM. Both modes use the same REST booking tools and database.
+<a id="quick-start"></a>
+## 快速開始 / Quick start
 
-## Manual setup (Windows PowerShell)
+### 1. 環境需求 / Prerequisites
+
+- Python 3.10+（實測 / tested: 3.13）
+- Node.js 22.12+ 與 / and npm（實測 / tested Node: 22.15）
+- 首次安裝需網路；埠 8000 須可用。 / Internet for installation and an available port 8000.
+
+### 2. 取得並啟動 / Clone and launch
+
+```powershell
+git clone https://github.com/gjtjx/KUDOS.git
+cd KUDOS
+.\setup.cmd
+.\start.cmd
+```
+
+Windows 也可依序雙擊 `setup.cmd`、`start.cmd`。安裝程式建立虛擬環境、安裝相依套件並建置前端。保留伺服器視窗，按 Ctrl+C 停止。
+
+On Windows, you can also double-click the two scripts in order. Setup creates a virtual environment, installs dependencies and builds the frontend. Keep the server window open; press Ctrl+C to stop it.
+
+- 應用程式 / Application: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- API 文件 / Interactive API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+首次啟動建立 `runtime/clinic.db` 並匯入六份 CSV；後續啟動保留預約與對話狀態。全新安裝預設為 **local 示範模式**，不需要 API Key，也不呼叫真實模型。要啟用 LLM，完成下節設定後重新啟動。
+
+The first startup seeds six CSV datasets into `runtime/clinic.db`. Later starts preserve appointments and conversation state. Fresh installations default to **local demo mode**, which requires no API key and makes no live model calls. Configure LLM mode below and restart to enable a provider.
+
+<details>
+<summary>手動安裝與開發 / Manual setup and development</summary>
+
+在專案根目錄執行 / Run from the project root:
 
 ```powershell
 python -m venv .venv
@@ -35,78 +76,126 @@ cd ..
 .\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-On macOS/Linux use `python3`, `.venv/bin/python` and `npm` for the same commands. Run from the project root. For development, run the backend as above and `npm run dev` in `frontend/`; Vite proxies /api to port 8000.
+macOS/Linux 使用 `python3`、`.venv/bin/python` 及 `npm` 取代相應命令；其他作業系統尚未驗收。開發時保持後端運行，在 `frontend/` 執行 `npm run dev`；Vite 將 `/api` 代理至 8000 埠。
 
-The seed is insert-if-missing, not a migration system. To reset demo data, stop the server, back up and move `runtime/clinic.db` elsewhere, then restart. Do not reset during an interview if you want to demonstrate persistence.
+On macOS/Linux, substitute `python3`, `.venv/bin/python` and `npm`; those platforms have not been validated. For development, keep the backend running and run `npm run dev` inside `frontend/`. Vite proxies `/api` to port 8000.
 
-## 真實 Claude 接入 / Live Claude integration
+</details>
 
-本機已驗證 Poe `claude-sonnet-5.5` 的 Chat Completions 工具呼叫、RAG、多輪預約及逐字稿摘要。結果與比較界線見 [LIVE_MODEL_REPORT.md](LIVE_MODEL_REPORT.md)。沒有密鑰的新安裝仍預設 local，不宣稱已連線。
+<a id="model-configuration"></a>
+## 模型設定 / Model configuration
 
-Poe Claude Sonnet 5.5 has been tested with real tool calls, retrieval, booking and transcript summarization. New installations without credentials still default to local mode.
+| 模式 / Mode | 行為 / Behavior |
+|---|---|
+| `AI_MODE=local` | 決定性的關鍵詞檢索、雙語意圖／欄位規則與模板回覆，適合免密鑰示範。 / Deterministic retrieval, bilingual routing/slot rules and templated answers for a key-free demo. |
+| `AI_MODE=llm` | 每則新訊息由真實模型辨識意圖、抽取欄位及生成有依據的回答；預約結果由 REST 回傳決定。 / Live model routing, extraction and grounded responses; REST results determine booking outcomes. |
 
-完整 DeepSeek 設定放在 .env：AI_MODE=llm、LLM_API_KEY=自己的密鑰、LLM_BASE_URL=https://api.deepseek.com、LLM_MODEL=deepseek-flash、LLM_API_STYLE=responses、LLM_TOOL_CHOICE=auto、LLM_STRICT_TOOLS=false、LLM_TIMEOUT_SECONDS=90。每項各佔一行。/ Put the complete matching provider profile in .env, one setting per line.
+兩種模式共用預約 API 與資料庫。模型失敗會明確回報，不會悄悄改用本機模板。 / Both modes share booking APIs and storage. Provider failures are explicit, with no silent local fallback.
 
-Poe/Sonnet 使用相應 Poe 密鑰，URL=https://api.poe.com/v1、model=claude-sonnet-5.5、style=chat_completions。程序環境變數優先於 .env；不再混入 .env.local。/ Use matching credentials when switching providers.
+### 設定檔 / Configuration file
 
-Poe 上此 Claude 模型實測不支援 Responses method，強制工具選擇也被上游拒絕，因此使用 auto，並由應用程式強制驗證必須收到正確工具呼叫。其他供應商可設定 `LLM_API_STYLE=responses` 或 `chat_completions`，及 `LLM_TOOL_CHOICE=forced`、`LLM_STRICT_TOOLS=true`；不要假設不同模型完全相容。
+在專案根目錄建立 `.env`，填入同一供應商的完整設定。以下 Key 僅為佔位文字。 / Create `.env` in the project root with one complete provider profile. The key below is a placeholder.
 
-This Claude model rejected Responses and forced tool choice in live tests. Auto tool choice works; the host still rejects missing/invalid tool calls. Other providers can use Responses or Chat Completions with strict schemas and forced tools when supported.
+```dotenv
+AI_MODE=llm
+LLM_API_KEY=your_api_key_here
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-flash
+LLM_API_STYLE=responses
+LLM_TOOL_CHOICE=auto
+LLM_STRICT_TOOLS=false
+LLM_TIMEOUT_SECONDS=90
+```
 
-LLM 模式每則新訊息都經模型辨識意圖，沒有就診流程的本機規則捷徑。模型將上下文問題改寫成檢索詞與目錄 ID；回答使用資料庫證據。預約成功或失敗的確認仍直接來自 REST 結果，避免寫入後又因生成失敗誤報。
+啟動只自動讀取 `.env`；程序環境變數優先，不再載入 `.env.local`。修改後須重啟。不要提交密鑰；`.env` 與其他憑證檔已排除於 Git 及容器建置內容之外。
 
-Every new LLM-mode message uses model routing. Contextual queries are rewritten into search terms/IDs and grounded in database evidence. Saved/rejected booking confirmations remain authoritative REST results.
+Startup loads `.env` only; process environment variables take precedence. `.env.local` is not loaded. Restart after changes. Credential files are excluded from Git and container build context; never commit keys.
 
-欄位齊全不等於允許提交：若明說「先不要提交」，系統保留草稿，直到明確確認；撤回已選日期、醫生或服務時會清除舊值。 / Complete fields do not override a request to wait. Held drafts require explicit confirmation; withdrawn selections are cleared.
+### 已驗證的組合 / Tested provider profiles
 
-額外邊界案例、發現的問題及修復證據： [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / Additional edge cases, findings and fixes are documented in the extended test report.
+| 設定 / Setting | DeepSeek | Poe / Claude |
+|---|---|---|
+| `LLM_BASE_URL` | `https://api.deepseek.com` | `https://api.poe.com/v1` |
+| `LLM_MODEL` | `deepseek-flash` | `claude-sonnet-5.5` |
+| `LLM_API_STYLE` | `responses` | `chat_completions` |
+| `LLM_TOOL_CHOICE` | `auto` | `auto` |
+| `LLM_STRICT_TOOLS` | `false` | `false` |
 
-模型失敗會顯示錯誤，不切回本機模板冒充真實模型。LLM 模式會把模擬病人、對話與必要目錄內容傳到供應商；不要提交或公開密鑰。
+切換時一併更換對應密鑰。Poe 此模型在實測中拒絕 Responses 與強制工具選擇；DeepSeek 的實測設定也不接受強制工具選擇。應用仍會驗證工具名稱、參數與業務規則。這些是已測供應商組合的結果，不代表所有平台上的同名模型均相容。
 
-Provider failures are explicit, with no silent local fallback. LLM mode sends mock patient, conversation and relevant catalog context to the configured provider.
+Switch credentials together with the provider profile. The tested Poe route rejected Responses and forced tool choice; the tested DeepSeek configuration also rejected forced tool choice. The application still validates tool names, arguments and business rules. See [MODEL_COMPARISON.md](MODEL_COMPARISON.md) for evidence and limitations.
 
-## 逐字稿摘要 / Transcript summary
+<a id="architecture"></a>
+## 架構與原理 / Architecture
 
-在頁面下方開啟「逐字稿摘要」，貼上醫病文字對話，按「產生摘要」。也可呼叫 `POST /api/transcripts/summarize`，body 為 `{"transcript":"..."}`。
+```mermaid
+flowchart TD
+    UI[React UI] --> API[FastAPI]
+    API --> Agent[Intent routing and conversation state]
+    Agent <--> LLM[LLM adapter: Responses / Chat Completions]
+    Agent --> RAG[Catalog retrieval: exact IDs + FTS5 / BM25]
+    Agent --> Booking[REST booking tools and validation]
+    RAG --> DB[(SQLite)]
+    Booking --> DB
+    Agent --> State[Session and request persistence]
+    State --> DB
+    API --> Summary[Transcript extraction and evidence checks]
+    Summary <--> LLM
+    API --> Trace[Request and LLM tracing]
+    Trace --> DB
+```
 
-Open Transcript summary below the chat, paste a written doctor-patient conversation and generate the summary. The REST endpoint takes a transcript string.
+1. **檢索 / Retrieval:** 六份 CSV 初始化關聯資料；診所、醫生與療程建立 FTS5 索引。模型改寫查詢，後端以精確 ID 或 BM25 取出證據，再生成回答。目前沒有向量嵌入或向量資料庫。 / Catalog records support exact-ID lookup and lexical retrieval; selected evidence grounds answers. No dense embeddings or vector database are implemented.
+2. **對話 / Conversation:** 模型輸出結構化意圖與欄位，後端管理持久化草稿、欄位撤回、暫停及確認。中途查詢不丟失預約進度。 / Structured model output is combined with persisted draft state, explicit field clearing and submission controls.
+3. **寫入 / Booking:** REST 驗證醫生、服務相容性及診所當地日期時間；交易與冪等鍵避免相同請求重複建立預約。 / REST validation and transactional idempotency protect booking writes. Success messages come from saved results.
+4. **摘要與追蹤 / Summary and tracing:** 摘要驗證四欄結構及原文引句；本機追蹤保存模型呼叫中繼資料。 / Summary output is checked against transcript evidence; local traces retain call metadata.
 
-輸出 `summary` 包含 `chief_complaint`、`diagnosis`、`medication`、`doctor_instructions`，以及各欄位的原文 `evidence`。未提及內容為 null；明說沒有開藥則保留這個事實。不自創診斷、藥名或劑量。這是文字摘要，沒有錄音轉文字功能。輸入長度上限 16,000 字元；逐字稿不寫入應用資料庫，但會送往模型供應商。
+小型目錄目前完整提供給意圖路由模型，回答階段再使用選定證據；資料量擴大時需先檢索候選。架構與取捨詳見 [TECH_DOC.md](TECH_DOC.md)。 / Routing currently receives the small catalog in full; larger catalogs would require candidate retrieval before routing.
 
-The four-field summary includes verbatim evidence. Missing information remains null; explicit no medication is preserved. It does not invent diagnoses or doses, and does not transcribe audio. Maximum input is 16,000 characters. Transcripts are sent to the provider but not persisted in the application database.
+<a id="demo"></a>
+## 示範流程 / Demo walkthrough
 
-## Five-minute interview demo
+使用相對於示範當天的未來日期，時間以所選診所當地時間為準。 / Use a future date; times are local to the selected clinic.
 
-Use future dates relative to the demo day; all times are local to the selected clinic.
+| 步驟 / Step | 輸入或操作 / Input or action | 預期結果 / Expected result |
+|---|---|---|
+| 1. 就診引導 / Visit guidance | 「我到醫院的流程」 / “What should I expect when visiting the clinic?” | 有依據的引導與現有預約資訊。 / Grounded guidance and appointment context. |
+| 2. 服務查詢 / Service Q&A | “I have a skin rash. What service is available?” | 目錄內的服務建議與來源。 / Catalog-based suggestions with sources. |
+| 3. 查詢預約 / Existing bookings | “When is my next appointment?” | 讀取資料庫中未來且已確認的預約。 / Reads future confirmed bookings. |
+| 4. 多輪收集 / Slot collection | 新對話：“I want to book an appointment.” → “Dr. Sarah Jenkins for a checkup.” | 收集醫生與服務，再追問日期時間。 / Selects doctor/service and asks for missing fields. |
+| 5. 儲存與重載 / Save and reload | 輸入未來日期時間，例如 “2035-11-08 at 9:30 am”。 / Supply a future date and time. | 有效且獲授權的完整草稿寫入；更新列表，重載後仍存在。 / A valid, authorized draft is saved and persists after reload. |
+| 6. 摘要與追蹤 / Summary and tracing | 開啟逐字稿摘要，貼上文字；再查看模型使用紀錄。 / Paste a transcript, then inspect model activity. | 四欄摘要、引句及請求／模型呼叫紀錄。 / Four summary fields, evidence and traces. |
 
-Before booking, try **“我到医院的流程”** / **“What should I expect when visiting the clinic?”** for a bilingual visit guide with current booking details. Unspecified on-site procedures are explicitly marked for clinic confirmation.
+LLM 模式可另測「先不要提交」、撤回日期、插入服務準備事項問題，再確認提交。推薦本身不代表同意預約；取消草稿不會取消已建立的預約。
 
-1. Ask **“我有花生過敏，可以諮詢誰？”**. The local answer references the allergy history, explains that the catalog has no dedicated allergy service, and identifies the general practitioner. Evidence labels show CSV and record IDs.
-2. Ask **“What are the clinic cancellation policies?”** or **“I have a skin rash. What service is available?”**.
-3. Ask **“When is my next appointment?”**. This reads current patient bookings via GET /api/bookings; only future Confirmed appointments are considered for “next”.
-4. Start a new conversation and say **“I want to book an appointment”**.
-5. Reply **“Dr. Sarah Jenkins for a checkup”**, then **“2035-11-08 at 9:30 am”**. Missing fields are requested across turns. When all fields are valid, the agent calls POST /api/bookings automatically.
-6. Verify the booking ID in the chat, tool trace and right-hand list. Refresh the page or restart the backend; the same booking remains.
-7. Try **“Book D103 T001 2035-11-08 09:30”** to demonstrate validation; reply **“D101”** to correct the doctor.
-8. In an unfinished draft say **“cancel booking draft”** to clear it. Existing appointment cancellation/rescheduling is outside this MVP.
+In LLM mode, also test holding a draft, withdrawing a date and asking a preparation question before confirming. A recommendation alone does not authorize a booking. Cancelling a draft does not cancel an existing appointment.
 
-Local mode supports doctor IDs/names, treatment IDs/basic names, YYYY-MM-DD, “tomorrow/明天”, HH:MM and English AM/PM. It is deliberately limited; ambiguous or unrecognized dates remain missing. LLM mode handles broader natural language. Explicitly select the service and doctor: recommendations alone do not authorize creating an appointment.
+Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`YYYY-MM-DD`、明天／tomorrow、`HH:MM` 及英文 AM/PM。 / Local mode supports a limited set of names, IDs and date/time expressions; use LLM mode for broader natural language.
 
-## API contract
+<a id="testing"></a>
+## 測試與驗證 / Testing
 
-- GET /api/health: backend status and actual mode.
-- GET /api/profile: fixed P001 profile, allergies and treatment history.
-- GET /api/catalog: clinics, doctors and treatments.
-- GET /api/bookings?patient_id=P001: joined appointment records, clinic timezone.
-- POST /api/chat: `message`, `session_id`, `request_id`, optional `patient_id` (P001 only).
-- POST /api/bookings: `doctor_id`, `treatment_id`, `booking_date`, `booking_time`, `request_id`, optional `notes` and `patient_id`.
+最近記錄的驗收日期為 **2026-10-22**；以下是既有測試結果，不代表本次文件調整重新呼叫了模型。 / Recorded acceptance results as of **2026-10-22**; documentation edits do not imply a new live-provider run.
 
-Reuse the same request ID and payload when retrying. Reusing it for different content returns 409. Validation failures return 422; database failure 503; model failure 502. The UI keeps the original request ID for retries after network errors.
+| 驗證 / Validation | 結果 / Recorded result |
+|---|---|
+| 後端單元／整合測試 / Backend unit and integration tests | 109 passed |
+| 前端單元／元件測試 / Frontend unit and component tests | 28 passed |
+| 前端正式建置 / Frontend production build | Passed |
+| DeepSeek 完整流程 / DeepSeek live acceptance | 82/82 checks passed |
+| Poe Sonnet 完整流程 / Poe Sonnet live acceptance | 82/82 checks passed |
 
-## Tests / 測試
+真實模型驗收使用相同程式與資料，涵蓋 14 輪對話、兩種逐字稿摘要、持久化、重試去重及追蹤。這是有限案例驗收，不是通用模型排名。雲端 CI 及容器／叢集執行尚未完成驗收。
+
+Live acceptance uses the same application and fixtures across 14 chat turns and two summaries, including persistence, retry deduplication and tracing. It is a bounded acceptance suite, not a general model benchmark. Cloud CI and container/cluster runtime remain unverified.
+
+<details>
+<summary>重跑本機測試 / Run local tests</summary>
+
+在專案根目錄執行 / Run from the project root:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
 $env:PYTHONPATH="backend"
 $env:AI_MODE="local"
 .\.venv\Scripts\python.exe -m coverage run -m unittest discover -s backend/tests -v
@@ -115,33 +204,85 @@ cd frontend
 npm.cmd ci
 npm.cmd run test:coverage
 npm.cmd run build
+cd ..
+Remove-Item Env:AI_MODE
 ```
 
-Tests create their own temporary SQLite files under runtime/tests. They do not write to your demo database. See VALIDATION.md for results and limits.
+測試使用獨立暫存 SQLite，不寫入示範資料庫。末行移除本次測試的模式覆寫，讓後續啟動可讀取 `.env`；若原有程序環境設定，請恢復原值。
 
-## Structure
+Tests use isolated SQLite files rather than the demo database. The final command removes the test-only mode override so later starts can read `.env`; restore any previous process setting if applicable.
 
-- backend/app/db.py: schema, seed, session storage.
-- backend/app/knowledge.py: FTS5/BM25 retrieval and bilingual query expansion.
-- backend/app/agent.py: intent routing, multi-turn workflow, LLM adapter and REST tools.
-- backend/app/answers.py: concise grounded answers, visit orientation and timezone-aware upcoming booking order.
-- backend/app/llm.py: Chat Completions/Responses transport, safe errors and usage traces.
-- backend/app/transcripts.py: evidence-validated transcript extraction.
-- scripts/live_acceptance.py: opt-in live-provider acceptance using isolated databases.
-- backend/app/main.py: validated API endpoints, persistence and frontend serving.
-- frontend/src/: React chat, evidence and live bookings.
-- mock-data/: all six original CSV datasets.
-- TECH_DOC.md: design, assumptions and tradeoffs.
+真實模型測試需要密鑰並消耗 API 額度；執行方式見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。完整測試證據與限制見 [VALIDATION.md](VALIDATION.md)。 / Live tests require credentials and consume API credits; see the linked reports for commands and evidence.
 
-## Scope and submission
+</details>
 
-Single predefined adult patient P001; no authentication; bind locally. New timeslots are assumed available, per assignment. New bookings cannot be in the past. Historical seeded records remain unchanged. This is clinic service navigation, not diagnosis or prescribing.
+<a id="deployment-and-scope"></a>
+## 部署與限制 / Deployment and scope
 
-Real model calls require configured credentials. Live Poe Claude acceptance is recorded separately from mocked unit tests. Transcript summarization and local tracing are implemented. Kubernetes manifests are provided; external Langfuse is not integrated.
+提供 Docker Compose 與 Kubernetes 設定，包含持久化儲存、健康檢查、非 root 執行及密鑰檔掛載。設定已離線檢查，尚未實際啟動容器或叢集。操作步驟見 [DEPLOYMENT.md](DEPLOYMENT.md)。
 
-Docker is included as an optional path: `docker compose up --build`. It has not been exercised on this machine. The volume persists the database.
+Docker Compose and Kubernetes manifests include persistent storage, probes, non-root execution and file-mounted secrets. They have received offline checks; container and cluster runtime have not been validated. See the deployment guide before use.
 
-Submission repository: https://github.com/gjtjx/KUDOS. The source excludes .env, .venv, runtime, node_modules and dist (covered by .gitignore); package-lock.json is included. The local delivery also contains prebuilt frontend assets, so start.cmd can use an existing compatible Python environment without rebuilding.
+- **使用範圍 / Access:** 固定模擬病人 P001，沒有登入或多人權限；維持本機存取。 / One predefined mock patient, no authentication or multi-user access control; intended for local use.
+- **預約範圍 / Booking:** 依作業假設時段可用；不含衝突檢查、既有預約取消或改期。 / Timeslots are assumed available; conflict checking and cancellation/rescheduling of saved bookings are outside scope.
+- **檢索與摘要 / Retrieval and summary:** FTS5/BM25，尚無向量檢索；摘要接收最多 16,000 字元的文字，不含錄音轉文字。 / Lexical retrieval only; summaries accept text up to 16,000 characters, with no audio transcription.
+- **資料與隱私 / Data:** LLM 模式將必要模擬病人、對話、目錄或逐字稿送往供應商。逐字稿不寫入應用資料庫；對話狀態會保存。追蹤表只存中繼資料。 / Necessary context is sent to the provider. Transcripts are not stored in the app database; conversations are persisted, while trace tables contain metadata only.
+- **擴展與維護 / Operations:** 單 worker、單副本 SQLite；未驗證水平擴展。CSV 採缺失記錄新增，並非資料遷移系統。 / Single-worker, single-replica SQLite; no validated horizontal scaling. CSV seeding inserts missing records rather than migrating existing ones.
+- **醫療邊界 / Clinical scope:** 提供服務導覽與資料摘要，不是診斷或處方系統；原文引句檢查不等於臨床驗證。 / Service navigation and summarization, not diagnosis or prescribing; evidence checks are not clinical validation.
 
+<a id="api-and-source-map"></a>
+## API 與專案結構 / API and source map
 
-最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。
+### API
+
+| 方法與路徑 / Method and path | 用途 / Purpose |
+|---|---|
+| `GET /api/health` | 模式與服務狀態 / Mode and service status |
+| `GET /api/live`, `GET /api/ready` | 程序／資料庫探針 / Process and database probes |
+| `GET /api/profile` | P001 個人資料與病史 / Mock patient profile and history |
+| `GET /api/catalog` | 診所、醫生與療程 / Clinics, doctors and treatments |
+| `GET /api/bookings?patient_id=P001` | 查詢預約 / Read appointments |
+| `POST /api/chat` | 多輪對話 / Conversation turn |
+| `POST /api/bookings` | 驗證並建立預約 / Validate and save an appointment |
+| `POST /api/transcripts/summarize` | 文字逐字稿摘要 / Summarize a transcript |
+| `GET /api/observability?limit=20` | 請求與模型追蹤 / Request and model traces |
+
+重試須沿用相同 `request_id` 與內容；相同 ID 配不同內容回傳 409。驗證失敗為 422，資料庫失敗為 503，模型失敗為 502。完整欄位見運行中的 [API 文件](http://127.0.0.1:8000/docs)。 / Reuse the same request ID and payload when retrying. Conflicting reuse returns 409; validation, database and model failures return 422, 503 and 502 respectively.
+
+### 原始碼導覽 / Source map
+
+```text
+backend/app/
+  main.py              API, transactions and frontend serving
+  agent.py             Intent routing, booking state and REST tools
+  knowledge.py         Catalog indexing and FTS5/BM25 retrieval
+  llm.py               Provider transport and compatibility
+  db.py                Schema, CSV seeding and persistence
+  models.py            Request validation
+  answers.py           Grounded local-mode replies and visit guidance
+  transcripts.py       Summary extraction and evidence validation
+  observability.py     Request traces and LLM spans
+backend/tests/         Backend unit and integration tests
+frontend/src/          React chat, bookings, summaries and trace viewer
+mock-data/             Six supplied CSV datasets
+scripts/               Live acceptance and deployment checks
+k8s/                   Kubernetes manifests
+Dockerfile             Multi-stage application image
+compose.yaml           Local-mode Docker Compose deployment
+compose.llm.yaml       LLM deployment override
+```
+
+<a id="documentation"></a>
+## 文件索引 / Documentation
+
+| 文件 / Document | 閱讀目的 / When to read |
+|---|---|
+| [TECH_DOC.md](TECH_DOC.md) | 理解架構、設計取捨與假設。 / Architecture, tradeoffs and assumptions. |
+| [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md) | 對照原始作業要求與完成範圍。 / Requirement-by-requirement implementation status. |
+| [VALIDATION.md](VALIDATION.md) | 查看測試、覆蓋率與驗收限制。 / Tests, coverage and acceptance limits. |
+| [MODEL_COMPARISON.md](MODEL_COMPARISON.md) | 查看最新 DeepSeek／Sonnet 對照及重跑方式。 / Latest provider comparison and reproduction commands. |
+| [MAINTENANCE.md](MAINTENANCE.md) | 維護、備份、還原及排錯。 / Maintenance, backup, restore and troubleshooting. |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Docker／Kubernetes 設定與操作。 / Container and Kubernetes setup. |
+| [OBSERVABILITY.md](OBSERVABILITY.md) | 追蹤欄位、保留策略與隱私範圍。 / Trace fields, retention and privacy scope. |
+| [LIVE_MODEL_REPORT.md](LIVE_MODEL_REPORT.md) | 早期 Claude 實測與相容性記錄。 / Earlier Claude acceptance and compatibility findings. |
+| [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md) | 額外邊界案例、問題與修復證據。 / Additional edge cases and regression evidence. |
