@@ -1,0 +1,12 @@
+services:
+  clinicpilot:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      AI_MODE: local
+    volumes:
+      - clinic-data:/app/runtime
+volumes:
+  clinic-data:
+
