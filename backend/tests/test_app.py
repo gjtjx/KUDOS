@@ -127,7 +127,7 @@ class AppTests(unittest.TestCase):
 
     def test_llm_tool_call_contract(self):
         self.app.state.agent.mode="llm"
-        response={"tool_calls":[{"function":{"name":"route_intent","arguments":json.dumps({"intent":"book","doctor_id":"D101","treatment_id":"T001","booking_date":"2035-11-08","booking_time":"09:30"})}}]}
+        response={"tool_calls":[{"function":{"name":"route_intent","arguments":json.dumps({"intent":"book","booking_action":"submit","doctor_id":"D101","treatment_id":"T001","booking_date":"2035-11-08","booking_time":"09:30"})}}]}
         with patch.object(self.app.state.agent,"llm",AsyncMock(return_value=response)) as model:
             r=self.chat("Please make this appointment").json()
         self.assertEqual(r["mode"],"llm")
@@ -176,4 +176,3 @@ class AppTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

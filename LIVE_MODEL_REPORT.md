@@ -2,6 +2,8 @@
 
 日期 / Date: 2026-10-22。模型 / Model: `claude-sonnet-5.5`，供應商 / Provider: Poe，介面 / API: Chat Completions。
 
+相容性結論：此模型可用；不支援的是本次測到的 Responses 呼叫方式。實際使用 Chat Completions + auto 工具選擇。後續邊界測試與修正見 [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / The model works through Chat Completions with auto tool choice; the rejected interface was Responses. See the extended report for subsequent findings and fixes.
+
 ## 比較邊界 / Comparison boundary
 
 你所指的「GPT-6 Astra High」是 Codex 對話中的模型選擇，沒有對應的專案 API 憑證。本次不能提供它的獨立 API 結果、延遲、token 或費用，也不能據此判定兩個模型誰更強。本文件比較的是 Claude 的真實執行結果與本對話的審核標準；不是兩模型同條件 benchmark。

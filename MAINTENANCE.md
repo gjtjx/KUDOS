@@ -78,6 +78,14 @@ CI 設定已加入上述測試與覆蓋率門檻。先前 GitHub Actions 因帳�
 
 CI contains the same checks. The previous GitHub Actions run was blocked by an account billing lock; the repository owner must resolve it. Local results do not imply a successful CI run.
 
+新增 test_extended.py 涵蓋提交授權、暫緩狀態持久化、撤回欄位、同時重試、衝突鍵與 API 邊界。真實模型額外測試（會消耗 API 額度，使用獨立資料庫）： / Added regressions cover consent, persistent holds, withdrawn fields, concurrency and API boundaries. Paid live edge cases use isolated databases:
+
+```powershell
+python scripts/expanded_acceptance.py --env-file .env --summary
+```
+
+可用 --only hold,withdraw_slot 只重跑指定情境。報告存於 runtime/expanded-acceptance/<run-id>/report.json；程式保留所有失敗案例，failed 陣列非空時以代碼 1 結束。 / Use --only hold,withdraw_slot to select scenarios. The report retains all failures and the harness exits with code 1 when the failed list is nonempty.
+
 ## 4. 資料備份與還原 / Backup and restore
 
 備份預約、對話及防重複紀錄必須一起保留；它們都在同一 SQLite 檔。使用 SQLite backup API 取得一致快照，不直接複製正在寫入的資料庫。若設定了 `DATABASE_PATH`，把 `source` 改成相同完整路徑。

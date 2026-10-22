@@ -73,6 +73,10 @@ LLM 模式每則新訊息都經模型辨識意圖，沒有就診流程的本機�
 
 Every new LLM-mode message uses model routing. Contextual queries are rewritten into search terms/IDs and grounded in database evidence. Saved/rejected booking confirmations remain authoritative REST results.
 
+欄位齊全不等於允許提交：若明說「先不要提交」，系統保留草稿，直到明確確認；撤回已選日期、醫生或服務時會清除舊值。 / Complete fields do not override a request to wait. Held drafts require explicit confirmation; withdrawn selections are cleared.
+
+額外邊界案例、發現的問題及修復證據： [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / Additional edge cases, findings and fixes are documented in the extended test report.
+
 模型失敗會顯示錯誤，不切回本機模板冒充真實模型。LLM 模式會把模擬病人、對話與必要目錄內容傳到供應商；不要提交或公開密鑰。
 
 Provider failures are explicit, with no silent local fallback. LLM mode sends mock patient, conversation and relevant catalog context to the configured provider.

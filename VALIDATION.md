@@ -3,8 +3,9 @@
 ## 已完成 / Completed
 
 - 真實 Poe Claude Sonnet 5.5：14 則對話及 2 則逐字稿摘要，78 項檢查通過。另有逐字稿指令注入測例，診斷與用藥保持 null。 / Live Claude: 14 chat turns, two summaries, 78 passing checks, plus a transcript-injection case.
-- 後端 71 項單元／整合測試通過；前端 22 項單元／元件測試通過，共 93 項。 / 71 backend and 22 frontend tests passed, 93 total.
-- 後端覆蓋率 97.49%（行與分支合併，backend/app 全部模組）；前端核心元件與 API 行、敘述、函式覆蓋率 100%，分支 92.30%。 / Backend combined coverage 97.49%; frontend core lines/statements/functions 100%, branches 92.30%.
+- 後端 86 項單元／整合測試通過；前端 22 項單元／元件測試通過，共 108 項。 / 86 backend and 22 frontend tests passed, 108 total.
+- 後端覆蓋率 97.50%（行與分支合併，backend/app 全部模組）；前端核心元件與 API 最近覆蓋率為行、敘述、函式 100%，分支 92.30%，本輪前端未變更。 / Backend combined coverage 97.50%; latest frontend core coverage is 100% lines/statements/functions and 92.30% branches; frontend code is unchanged.
+- 額外真實情境 167 項檢查通過，修復後原始完整流程 78 項亦通過；最後文案調整另有 4 項針對性檢查。發現與修正詳見 [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / 167 additional live checks and the 78-check core rerun passed, plus four final formatting checks; see the extended report.
 - React 正式建置成功。 / Production build passed.
 
 環境 / Environment: Windows, Python 3.13, Node 22.15, Vite 6.4.5, Vitest 4.1.12.

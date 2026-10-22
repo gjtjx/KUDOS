@@ -49,6 +49,10 @@ State is keyed by opaque browser session ID, always bound to P001. Each state co
 
 All parameters remain validated independently of model output. Unknown IDs, inappropriate doctor/service combinations, dates in the past and invalid time formats are rejected. A rejected draft remains editable and is never described as saved.
 
+The route tool separates intent/slots from booking_action (collect, hold, submit, confirm), plus clear_slots for explicitly withdrawn selections. The host persists booking_hold with the session. A normal submit cannot override a hold; only an explicit confirm releases it. Clearing fields occurs before merging new values and checking completeness. Missing or invalid LLM booking permission fails without writing. Local demo routing uses the same host gate with limited phrase matching.
+
+路由新增提交意願與撤回欄位，後端獨立檢查是否可提交；暫緩狀態會跨提問與重啟保留，直到使用者明確確認。此設計修正「資料完整但使用者尚未同意」及「撤回日期後仍沿用舊值」兩個實測問題。
+
 Local mode is a deterministic fallback for an interview without credentials. LLM mode uses a strict JSON function schema for routing/extraction; the host retains control of side effects. Booking confirmation comes from the API result, not a model-generated claim.
 
 ## 4. RAG decisions
