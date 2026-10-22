@@ -31,3 +31,26 @@ def retrieve(db, query):
     match = " OR ".join('"' + token + '"' for token in tokens)
     rows = db.rows("SELECT source,record_id,content,bm25(knowledge) AS score FROM knowledge WHERE knowledge MATCH ? ORDER BY score LIMIT 6", (match,))
     return [{"source": r["source"], "id": r["record_id"], "data": json.loads(r["content"])} for r in rows]
+
+
+def retrieve_grounded(db, query):
+    """Resolve model-selected catalog IDs first, adding only related evidence.
+
+    The model rewrites the question; it never supplies record contents. All facts
+    are read from SQLite. Free-text queries retain FTS/BM25 retrieval.
+    """
+    ids=list(dict.fromkeys(re.findall(r'\b[CDT]\d{3}\b',query.upper())))
+    if not ids:
+        return retrieve(db,query)
+    result={}
+    def add(ident):
+        table,key={'C':('clinics','clinic_id'),'D':('doctors','doctor_id'),'T':('treatments','treatment_id')}[ident[0]]
+        rows=db.rows('SELECT * FROM '+table+' WHERE '+key+'=?',(ident,))
+        if rows: result[ident]={'source':table+'.csv','id':ident,'data':rows[0]}
+    for ident in ids: add(ident)
+    for item in list(result.values()):
+        if item['source']=='treatments.csv':
+            for ident in MATCHES[item['id']]: add(ident)
+    for item in list(result.values()):
+        if item['source']=='doctors.csv': add(item['data']['clinic_id'])
+    return list(result.values())

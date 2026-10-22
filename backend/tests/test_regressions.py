@@ -10,6 +10,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.db import Database
 from app.main import create_app
+from app.knowledge import retrieve_grounded
 
 ROOT=Path(__file__).resolve().parents[2]
 class RegressionTests(unittest.TestCase):
@@ -102,3 +103,9 @@ class RegressionTests(unittest.TestCase):
         with patch.object(self.db,'profile',side_effect=sqlite3.OperationalError('private path')):
             r=self.client.get('/api/profile')
         self.assertEqual(r.status_code,503); self.assertNotIn('private path',r.text)
+
+    def test_model_id_retrieval_includes_only_related_evidence(self):
+        sources=retrieve_grounded(self.db,'D103 T003 dermatology preparation')
+        self.assertEqual({s['id'] for s in sources},{'D103','T003','C002'})
+        self.assertEqual(retrieve_grounded(self.db,'T999'),[])
+        self.assertTrue(retrieve_grounded(self.db,'skin rash'))

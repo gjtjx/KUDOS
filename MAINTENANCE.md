@@ -15,7 +15,7 @@ Run `setup.cmd`, then `start.cmd` from the project root. Stop with Ctrl+C in the
 | `AI_MODE=local` | 預設規則與模板模式，不呼叫外部模型。 / Default deterministic rules and templates; no remote model call. |
 | `AI_MODE=llm` | 設定 `LLM_API_KEY`、`LLM_MODEL` 及 `LLM_BASE_URL` 後重新啟動。 / Set credentials/model/base URL and restart. |
 | `DATABASE_PATH` | 預設 `runtime/clinic.db`；變更前備份並使用完整路徑。 / Defaults to runtime/clinic.db; back up before changing and prefer an absolute path. |
-| `.env` | 從 `.env.example` 複製；禁止提交密鑰。程序環境變數優先於此檔。 / Copy the example; never commit secrets. Process environment takes precedence. |
+| `.env` | 從 `.env.example` 複製；禁止提交密鑰。優先序為程序環境 → .env.local → .env。 / Copy the example; never commit secrets. Precedence: process environment, .env.local, .env. |
 
 啟動後查詢 `/api/health` 並核對畫面的 LOCAL／LLM 標籤。不要只憑 `.env` 判斷實際模式。LLM 模式會把模擬病人與對話資料送往所設定的服務商。
 
@@ -146,6 +146,22 @@ New chat rotates the session and clears the UI/unsent input without deleting sav
 3. 停止舊服務，更新程式與前端 dist，保留 `.env`、runtime 及備份，再啟動。 / Stop, update code/assets, preserve environment/data/backups, then restart.
 4. 執行第 2 節檢查。如失敗，部署上一版原始碼並重建；只有資料格式確實變更且需要還原時才使用備份，先保存失敗版本新增的資料。 / Smoke-test; roll back code/assets if needed. Restore data only when schema changes require it, preserving new records first.
 
-本版本沒有資料表遷移。真實 LLM、Docker 執行、跨平台、負載及 DST 歧義時間仍需獨立驗收；單元測試不能取代這些檢查。
+本版本沒有資料表遷移。真實 Claude 已完成特定測例驗收；其他供應商、Docker 執行、跨平台、負載及 DST 歧義時間仍需獨立驗收；單元測試不能取代這些檢查。
 
-This release has no schema migration. Live LLM, Docker runtime, other platforms, load and DST ambiguity still need separate acceptance.
+This release has no schema migration. Poe Claude has live acceptance for the recorded cases; other providers, Docker, other platforms, load and DST ambiguity require separate acceptance.
+
+## 8. 真實模型與摘要維護 / Live model and summary maintenance
+
+已驗證的 Poe 模型參數見 README。密鑰放 .env、模型參數放 .env.local；不要直接套用 Responses 或 forced tools 到不支援的模型。遇 401 檢查密鑰，402 檢查點數，404 檢查模型 ID；400 可能為介面或工具參數不相容。前端呼叫紀錄可看模型名稱、response ID，後端只回安全錯誤分類。
+
+See README for verified Poe settings. Store the key in .env and provider settings in .env.local. Check credentials for 401, quota for 402, model ID for 404, and protocol/tool compatibility for 400. Traces show model and response IDs without credentials.
+
+需要真實回歸時執行 `python scripts/live_acceptance.py --env-file .env --model claude-sonnet-5.5 --summary`，會消耗 API 額度。輸出在 runtime/live-acceptance 下；保持隔離，不把測試 DB 指向目前 clinic.db。真實模型可能非決定性；失敗時先檢查 report.json 中的原句、intent、sources、tool_trace 與實際 DB 紀錄，勿只重跑直到通過。
+
+Live regression consumes API quota and produces isolated evidence reports. Inspect failed transcripts and actual database records instead of repeatedly rerunning until success.
+
+新增測試對照：`test_llm_features.py` 涵蓋兩種 API 形狀、Poe auto 模式、工具缺失、供應商錯誤、無本機捷徑、摘要 schema／引文／缺失值／錯誤與無資料庫副作用；`TranscriptSummary.test.jsx` 涵蓋模式限制、摘要顯示、重複提交阻止及錯誤。`test_regressions.py` 驗證模型選定 ID 僅帶入關聯資料。
+
+Added tests cover API compatibility, strict host validation, transcript evidence and UI behavior. Exact evidence matching does not prove semantic accuracy; clinically meaningful summaries require human review. Transcripts are not persisted by this endpoint, while the provider may have its own retention policy.
+
+摘要引文驗證失敗時，最多再呼叫模型一次修復。第二次仍失敗回 502，畫面不保留舊摘要。tool_trace 中可見 rejected 的驗證原因；不要改成跳過引文驗證。 / Evidence validation allows one model repair attempt, then fails explicitly; never bypass validation to force success.

@@ -37,22 +37,55 @@ On macOS/Linux use `python3`, `.venv/bin/python` and `npm` for the same commands
 
 The seed is insert-if-missing, not a migration system. To reset demo data, stop the server, back up and move `runtime/clinic.db` elsewhere, then restart. Do not reset during an interview if you want to demonstrate persistence.
 
-## Enable real LLM orchestration
+## 真實 Claude 接入 / Live Claude integration
 
-Copy `.env.example` to `.env` in the project root, then configure:
+本機已驗證 Poe `claude-sonnet-5.5` 的 Chat Completions 工具呼叫、RAG、多輪預約及逐字稿摘要。結果與比較界線見 [LIVE_MODEL_REPORT.md](LIVE_MODEL_REPORT.md)。沒有密鑰的新安裝仍預設 local，不宣稱已連線。
+
+Poe Claude Sonnet 5.5 has been tested with real tool calls, retrieval, booking and transcript summarization. New installations without credentials still default to local mode.
+
+把 API Key 放在未追蹤的 `.env`： / Put the API key in the untracked `.env`:
+
+```dotenv
+LLM_API_KEY=your-poe-api-key
+```
+
+把供應商設定放在 `.env.local`，避免編輯器舊設定覆蓋已驗證參數： / Put provider settings in `.env.local`:
 
 ```dotenv
 AI_MODE=llm
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=your-tool-calling-model-id
-LLM_API_KEY=your-api-key
+LLM_BASE_URL=https://api.poe.com/v1
+LLM_MODEL=claude-sonnet-5.5
+LLM_API_STYLE=chat_completions
+LLM_TOOL_CHOICE=auto
+LLM_STRICT_TOOLS=false
+LLM_TIMEOUT_SECONDS=90
 ```
 
-Choose a model that supports Chat Completions function calling and strict tool schemas. Model access is provider/account dependent; no model or key is assumed. Restart the backend. The UI badge must say LLM.
+重新啟動後，`/api/health` 和畫面應顯示模型名稱。優先序為程序環境變數 → .env.local → .env。這兩個檔都不進 Git 或 Docker image。
 
-Recognized visit-process questions use a grounded host-side guide in either mode. Other questions in LLM mode dynamically route intent and extracts booking fields with the `route_intent` function schema. The host executes the corresponding retrieval or REST tool, validates every booking, and derives confirmation directly from the saved record. For knowledge questions, retrieved records and patient context ground a second model call.
+Restart and verify the model name in health/UI. Precedence: process environment, .env.local, then .env. Neither settings file is committed or included in Docker images.
 
-Only LLM mode transmits conversation, mock patient profile/history, bookings and catalog context to the configured provider. Never commit `.env`. Provider errors return an explicit retryable error, not a silently simulated LLM response.
+Poe 上此 Claude 模型實測不支援 Responses method，強制工具選擇也被上游拒絕，因此使用 auto，並由應用程式強制驗證必須收到正確工具呼叫。其他供應商可設定 `LLM_API_STYLE=responses` 或 `chat_completions`，及 `LLM_TOOL_CHOICE=forced`、`LLM_STRICT_TOOLS=true`；不要假設不同模型完全相容。
+
+This Claude model rejected Responses and forced tool choice in live tests. Auto tool choice works; the host still rejects missing/invalid tool calls. Other providers can use Responses or Chat Completions with strict schemas and forced tools when supported.
+
+LLM 模式每則新訊息都經模型辨識意圖，沒有就診流程的本機規則捷徑。模型將上下文問題改寫成檢索詞與目錄 ID；回答使用資料庫證據。預約成功或失敗的確認仍直接來自 REST 結果，避免寫入後又因生成失敗誤報。
+
+Every new LLM-mode message uses model routing. Contextual queries are rewritten into search terms/IDs and grounded in database evidence. Saved/rejected booking confirmations remain authoritative REST results.
+
+模型失敗會顯示錯誤，不切回本機模板冒充真實模型。LLM 模式會把模擬病人、對話與必要目錄內容傳到供應商；不要提交或公開密鑰。
+
+Provider failures are explicit, with no silent local fallback. LLM mode sends mock patient, conversation and relevant catalog context to the configured provider.
+
+## 逐字稿摘要 / Transcript summary
+
+在頁面下方開啟「逐字稿摘要」，貼上醫病文字對話，按「產生摘要」。也可呼叫 `POST /api/transcripts/summarize`，body 為 `{"transcript":"..."}`。
+
+Open Transcript summary below the chat, paste a written doctor-patient conversation and generate the summary. The REST endpoint takes a transcript string.
+
+輸出 `summary` 包含 `chief_complaint`、`diagnosis`、`medication`、`doctor_instructions`，以及各欄位的原文 `evidence`。未提及內容為 null；明說沒有開藥則保留這個事實。不自創診斷、藥名或劑量。這是文字摘要，沒有錄音轉文字功能。輸入長度上限 16,000 字元；逐字稿不寫入應用資料庫，但會送往模型供應商。
+
+The four-field summary includes verbatim evidence. Missing information remains null; explicit no medication is preserved. It does not invent diagnoses or doses, and does not transcribe audio. Maximum input is 16,000 characters. Transcripts are sent to the provider but not persisted in the application database.
 
 ## Five-minute interview demo
 
@@ -104,6 +137,9 @@ Tests create their own temporary SQLite files under runtime/tests. They do not w
 - backend/app/knowledge.py: FTS5/BM25 retrieval and bilingual query expansion.
 - backend/app/agent.py: intent routing, multi-turn workflow, LLM adapter and REST tools.
 - backend/app/answers.py: concise grounded answers, visit orientation and timezone-aware upcoming booking order.
+- backend/app/llm.py: Chat Completions/Responses transport, safe errors and usage traces.
+- backend/app/transcripts.py: evidence-validated transcript extraction.
+- scripts/live_acceptance.py: opt-in live-provider acceptance using isolated databases.
 - backend/app/main.py: validated API endpoints, persistence and frontend serving.
 - frontend/src/: React chat, evidence and live bookings.
 - mock-data/: all six original CSV datasets.
@@ -113,7 +149,7 @@ Tests create their own temporary SQLite files under runtime/tests. They do not w
 
 Single predefined adult patient P001; no authentication; bind locally. New timeslots are assumed available, per assignment. New bookings cannot be in the past. Historical seeded records remain unchanged. This is clinic service navigation, not diagnosis or prescribing.
 
-Real model calls need your own configured credentials. The default demo and mocked tool-contract tests do not prove live provider integration. Optional transcript summarization, Langfuse and Kubernetes are not implemented.
+Real model calls require configured credentials. Live Poe Claude acceptance is recorded separately from mocked unit tests. Transcript summarization is implemented; Langfuse and Kubernetes remain unimplemented.
 
 Docker is included as an optional path: `docker compose up --build`. It has not been exercised on this machine. The volume persists the database.
 

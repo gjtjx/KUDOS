@@ -13,6 +13,7 @@ from app.answers import is_visit_flow, local_answer, visit_answer, upcoming_book
 from app.knowledge import retrieve
 from app.localization import normalize_input, translated_value, localized_booking
 from app.models import ChatInput, BookingInput
+from app.llm import ProviderError
 
 DATA = Path(__file__).resolve().parents[2] / 'mock-data'
 def catalog():
@@ -160,13 +161,14 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
     async def test_llm_http_contract_and_failure(self):
         response=httpx.Response(200,json={'choices':[{'message':{'content':'answer'}}]},request=httpx.Request('POST','https://example.test/chat/completions'))
         client=MagicMock(); client.__aenter__=AsyncMock(return_value=client); client.__aexit__=AsyncMock(return_value=False); client.post=AsyncMock(return_value=response)
-        with patch.dict(os.environ,{'LLM_MODEL':'test-model','LLM_API_KEY':'test-only','LLM_BASE_URL':'https://example.test/'}),patch('app.agent.httpx.AsyncClient',return_value=client):
+        with patch.dict(os.environ,{'LLM_MODEL':'test-model','LLM_API_KEY':'test-only','LLM_BASE_URL':'https://example.test/','LLM_API_STYLE':'chat_completions','LLM_TOOL_CHOICE':'forced','LLM_STRICT_TOOLS':'true'}),patch('app.agent.httpx.AsyncClient',return_value=client):
             self.assertEqual(await self.agent.llm([{'role':'user','content':'hello'}]),{'content':'answer'})
             args,kwargs=client.post.call_args
             self.assertEqual(args[0],'https://example.test/chat/completions'); self.assertNotIn('tools',kwargs['json'])
-            await self.agent.llm([],tools=[{'type':'function'}]); self.assertEqual(client.post.call_args.kwargs['json']['tool_choice']['function']['name'],'route_intent')
+            client.post.return_value=httpx.Response(200,json={'choices':[{'message':{'tool_calls':[{'function':{'name':'route_intent','arguments':'{}'}}]}}]},request=httpx.Request('POST',args[0]))
+            await self.agent.llm([],tools=[{'type':'function','function':{'name':'route_intent'}}]); self.assertEqual(client.post.call_args.kwargs['json']['tool_choice']['function']['name'],'route_intent')
             client.post.return_value=httpx.Response(429,request=httpx.Request('POST',args[0]))
-            with self.assertRaises(httpx.HTTPStatusError): await self.agent.llm([])
+            with self.assertRaises(ProviderError): await self.agent.llm([])
 
     def test_mode_configuration_validation(self):
         with patch.dict(os.environ,{'AI_MODE':'unknown'}),self.assertRaises(ValueError): Agent(None,None)

@@ -41,7 +41,7 @@ HTTPX ASGITransport dispatches real HTTP request/response objects through the ex
 
 State is keyed by opaque browser session ID, always bound to P001. Each state contains an active flag, a four-slot draft with a booking idempotency key, and a capped twenty-message history.
 
-- visit_flow: provide general visit orientation, enriched with the next booking and catalog address/preparation. Missing on-site policies are explicitly unknown; no booking is created and drafts are preserved. Recognized visit queries use this deterministic path in both modes.
+- visit_flow: provide general visit orientation, enriched with the next booking and catalog address/preparation. Missing on-site policies are explicitly unknown; no booking is created and drafts are preserved. In local mode this is deterministic; in LLM mode intent and wording both use the model, with host-provided factual context.
 - knowledge: retrieve evidence and answer; leave any active draft intact.
 - bookings: read latest records via REST, return next future Confirmed booking plus history.
 - book: merge explicitly extracted parameters. Ask for missing doctor, treatment, date and time. Once complete, execute the booking API.
@@ -101,11 +101,23 @@ The implementation uses the documented Chat Completions function calling format:
 
 ## 8. Verification and known limits
 
-Automated tests exercise persisted records through FastAPI, multi-turn completion, interleaved questions, session isolation, retries, failed chat-save recovery, invalid inputs, existing-record retrieval and mocked LLM function calls. No live remote model call has been made without user-configured credentials.
+Automated tests exercise persisted records through FastAPI, multi-turn completion, interleaved questions, session isolation, retries, failed chat-save recovery, invalid inputs, existing-record retrieval and mocked LLM function calls. With user-configured credentials, Poe Claude Sonnet 5.5 live acceptance now covers the complete workflow; see LIVE_MODEL_REPORT.md.
 
-Structured medical transcript extraction, external tracing, automated clinical evaluations, authentication, rate limiting, long-term session retention and booking cancellation/rescheduling are outside the submitted MVP. Docker files are supplied but not runtime-tested.
+Structured transcript extraction is now implemented with a strict application schema and verbatim evidence validation. External tracing, automated clinical evaluations, authentication, rate limiting, long-term session retention and booking cancellation/rescheduling remain outside the MVP. Docker files are supplied but not runtime-tested.
 
 
 ## 9. Regression fix and maintainability
 
 The reported new-chat utterance “我到医院的流程” previously fell through to lexical search with no matching tokens. The fallback then unconditionally mentioned allergies and generic help; other answers dumped full catalog rows. `answers.py` now separates visit guidance from field-specific factual responses, omits unrelated personal context, and preserves conditional preparation instructions. The React application and API client are independently importable for component/unit tests. New chat also clears unsent input. See MAINTENANCE.md for the feature-to-test matrix and operational procedures.
+
+## 10. Claude, RAG and transcript extension / Claude、檢索與摘要擴充
+
+LLM mode no longer calls is_visit_flow before the model. The route_intent schema adds search_query so Claude can resolve references and rewrite a standalone retrieval query. Catalog IDs select actual database rows and related doctor/clinic records; otherwise FTS5/BM25 is used. This is structured/lexical RAG, not embeddings. The model never provides the factual row contents.
+
+LLM 模式每次由 Claude 先判斷意圖；search_query 用於解析上下文及檢索改寫。目錄 ID 只查真實資料列與關聯，不接受模型自造資料；無 ID 時使用 FTS5/BM25。
+
+llm.py supports both API shapes and records provider response ID, model, latency and token usage without credentials or hidden reasoning. Poe's selected Claude model was verified using Chat Completions, auto tool choice and application validation. Empty answers, incomplete output, absent tool calls and provider failures never silently become local answers.
+
+逐字稿摘要以獨立工具 summarize_transcript 提取四個 nullable 欄位及 evidence。所有非空欄位必須有逐字引用，引用必須出現在原文；未提及欄位為 null。這是來源驗證，不是臨床正確性證明。摘要不使用 P001 個資，也不寫入聊天或預約資料表。
+
+The summary endpoint is stateless, does not inject P001 context and does not persist transcripts. It validates evidence provenance but still requires human semantic review. The browser timeout allows two sequential provider calls; server timeout is configurable from 1 to 180 seconds. Chat execution remains single-worker and serialized.

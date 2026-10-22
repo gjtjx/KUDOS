@@ -18,11 +18,14 @@ from .db import Database
 from .models import ChatInput, BookingInput
 from .knowledge import MATCHES
 from .agent import Agent
+from .llm import ProviderError, configuration
+from .transcripts import TranscriptInput, summarize
 from .localization import TRANSLATIONS, localized_booking
 
 ROOT = Path(__file__).resolve().parents[2]
 try:
     from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env.local")
     load_dotenv(ROOT / ".env")
 except ImportError:
     pass
@@ -50,11 +53,27 @@ def create_app(db_path=None, data_dir=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "mode": app.state.agent.mode, "patient_id": "P001"}
+        return {"status": "ok", "mode": app.state.agent.mode, "patient_id": "P001",
+                "model": os.getenv("LLM_MODEL") if app.state.agent.mode == "llm" else None,
+                "api_style": os.getenv("LLM_API_STYLE", "chat_completions") if app.state.agent.mode == "llm" else None}
 
     @app.get("/api/profile")
     def profile():
         return {**db.profile(), "known_allergies_zh": "青黴素、花生"}
+
+    @app.post("/api/transcripts/summarize")
+    async def summarize_transcript(body: TranscriptInput):
+        if not body.transcript.strip():
+            raise HTTPException(422, "逐字稿不得為空 / Transcript must not be blank")
+        if app.state.agent.mode != 'llm':
+            raise HTTPException(503, "請先啟用真實模型 / Enable LLM mode to summarize transcripts")
+        try:
+            return await summarize(body.transcript)
+        except ProviderError as error:
+            raise HTTPException(502, "摘要服務失敗 / Summary provider failed: " + error.code) from error
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
+            logging.warning("Transcript summary failed: %s", type(error).__name__)
+            raise HTTPException(502, "逐字稿摘要未完成，請重試 / Transcript summary failed; please retry") from error
 
     @app.get("/api/catalog")
     def catalog():
@@ -114,6 +133,9 @@ def create_app(db_path=None, data_dir=None):
             state = db.state(body.session_id)
             try:
                 response = await app.state.agent.run(body.message, state, key)
+            except ProviderError as error:
+                logging.warning("Model provider failed: %s", error.code)
+                raise HTTPException(502, "模型服務未能完成請求 / Model provider failed: " + error.code + ". 請檢查設定後重試 / Check configuration and retry.") from error
             except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError) as error:
                 logging.warning("Agent failed: %s", type(error).__name__)
                 raise HTTPException(502, "AI 服務未能完成請求，未發出預約確認，請重試。 / AI service could not complete the request. Please retry; no booking confirmation was issued.") from error
@@ -130,4 +152,3 @@ def create_app(db_path=None, data_dir=None):
         def index():
             return FileResponse(dist / "index.html")
     return app
-
