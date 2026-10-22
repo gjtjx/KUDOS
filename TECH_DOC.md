@@ -36,6 +36,7 @@ Each turn reads current bookings through REST. ASGITransport dispatches through 
 | [db.py](backend/app/db.py)、[models.py](backend/app/models.py) | 持久化、初始化及輸入驗證 / Persistence, seed, input validation |
 | [answers.py](backend/app/answers.py)、[localization.py](backend/app/localization.py) | 本機回答與雙語顯示 / Local answers and localization |
 | [transcripts.py](backend/app/transcripts.py) | 摘要與引文驗證 / Summary and evidence checks |
+| [presentation.py](backend/app/presentation.py) | 生成文字的繁體、換行與姓名顯示正規化；不修改原文引句 / Display normalization, leaving verbatim evidence unchanged |
 | [observability.py](backend/app/observability.py) | 請求與模型追蹤 / Request and generation traces |
 | [frontend/src](frontend/src) | 聊天、預約、摘要、追蹤與重試 / React workbench |
 
@@ -55,7 +56,7 @@ Local mode is an explicit deterministic demo, not an automatic fallback for prov
 Session 綁定 P001，保存 `active`、`draft`、`booking_hold` 和最多 20 則歷史訊息；模型使用最近 12 則歷史訊息。這是訊息數，不是問答輪數；結構化草稿可保留更早的選擇。
 Sessions retain bounded history and structured booking state, not unlimited conversational memory.
 
-`route_intent` 輸出意圖、`search_query`、四欄位、`clear_slots` 與 `booking_action`。主機依序處理：
+`route_intent` 輸出意圖、`search_query`、四欄位、`clear_slots`、`booking_action`，以及可回溯使用者原文的 `authorization_quote`／`hold_quote`。主機驗證引文來源；具授權依據的完整、未暫緩草稿可修正誤判的 collect；既有 hold 不會因此解除。主機依序處理：
 The host processes the routing result in this order:
 
 1. 清除明確撤回的欄位；null／未提及不刪舊值。 / Clear explicitly withdrawn fields; absent/null values preserve selections.
@@ -74,8 +75,8 @@ Invalid routing structure allows one bounded retry before side effects. Host val
 - 無 ID 時做雙語詞彙擴展、去除停用詞，以參數化 FTS5 MATCH 查詢、BM25 排序，最多六筆。 / Otherwise use lexical retrieval, limited to six ranked results.
 - 回答模型根據檢索內容生成；病史與預約另外注入，不進通用知識索引。 / Patient context is separate from the general knowledge index.
 
-目前沒有 embedding、向量資料庫或 reranker。路由模型仍看到完整小型目錄，回答階段才縮小證據；大資料量應在路由前先取候選。來源標籤不等於每句生成內容已自動驗真。
-No dense retrieval is implemented. Full-catalog routing is a scaling limitation, and citations are not sentence-level fact verification.
+目前沒有 embedding、向量資料庫或 reranker。路由與知識回答均看到完整小型目錄；回答另外使用選定證據，避免把局部檢索缺失當作整份目錄缺失。大資料量應先取候選並標明檢索範圍。來源標籤不等於每句生成內容已自動驗真。
+No dense retrieval is implemented. Full-catalog context is a scaling limitation, and citations are not sentence-level fact verification. Booking lookup, missing-field prompts and saved/rejected confirmations use authoritative backend text after real model routing; knowledge and visit guidance retain model generation.
 
 FTS5 的優點是本機、可解釋且易驗證，代價是同義詞與口語召回有限。未來可比較 BM25 與混合檢索，但須使用標註題庫衡量召回、無答案行為及延遲，不能假定向量化必然更好。
 The lexical baseline favors simplicity; hybrid retrieval remains a proposal requiring evaluation.

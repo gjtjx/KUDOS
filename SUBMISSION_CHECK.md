@@ -4,9 +4,9 @@
 
 ## 1. 結論 / Decision
 
-**後續擴大測試 / Follow-up broad review:** [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md) retain open answer-quality findings: an overbroad claim from incomplete retrieved evidence, intermittent extra-confirmation wording and formatting/name-localization issues. Mechanical passes must not be interpreted as all response content being correct. This qualifies the bounded submission assessment below.
+**歷史擴大測試，後續修復見 [FIX_VALIDATION](FIX_VALIDATION.md) / Historical broad review, subsequently corrected:** [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md) originally found answer-quality issues: an overbroad claim from incomplete retrieved evidence, intermittent extra-confirmation wording and formatting/name-localization issues. Mechanical passes must not be interpreted as all response content being correct. This qualifies the bounded submission assessment below.
 
-**暫緩直接提交，先修正擴大測試發現的英文預約執行失敗。 / Withhold direct submission until the English booking execution failure found in the broader review is fixed.** The earlier bounded review exercised required knowledge retrieval, patient context, multi-turn collection, REST booking persistence and React booking-list updates, but did not expose the later failure. Configure a valid provider key for the full natural-language and transcript demonstration; a fresh checkout defaults to limited local mode.
+**所列失敗已修復並通過定向與完整流程驗證，可作為本機演示的 MVP 提交。 / The identified failures have been fixed and passed targeted and full-flow retests; ready as a locally demonstrated MVP.** See [FIX_VALIDATION.md](FIX_VALIDATION.md). The full 64-scenario suite has not been rerun. The earlier bounded review exercised required knowledge retrieval, patient context, multi-turn collection, REST booking persistence and React booking-list updates, but did not expose the later failure. Configure a valid provider key for the full natural-language and transcript demonstration; a fresh checkout defaults to limited local mode.
 
 This is a bounded review, not a guarantee for every model response. Cloud CI, container execution and Kubernetes cluster execution are not verified. Authentication, existing-booking cancellation/rescheduling, vector embeddings and audio transcription are outside the implemented scope; see [README.md](README.md).
 

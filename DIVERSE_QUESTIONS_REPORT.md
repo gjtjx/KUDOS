@@ -1,5 +1,7 @@
 # 64 場景真實模型測試 / 64-scenario live review
 
+**後續修復 / Follow-up:** [FIX_VALIDATION.md](FIX_VALIDATION.md) records the later code changes, 112 targeted checks and 82 full-flow checks. The original failures and observations below remain historical evidence; the entire broad suite was not rerun.
+
 日期 / Date: **2026-10-23 (Asia/Shanghai)**. Application baseline: `b88be42`. Provider: `deepseek-flash`, Responses, automatic tool choice, non-strict tools. This adds a distinct broad test suite; earlier reports remain dated separately.
 
 ## 結果 / Results

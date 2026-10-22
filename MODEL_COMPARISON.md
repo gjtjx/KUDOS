@@ -1,5 +1,7 @@
 # 模型相容性與對照 / Provider Compatibility and Comparison
 
+最新修復與驗證 / Latest fixes and retest: [FIX_VALIDATION.md](FIX_VALIDATION.md). Earlier counts and provider comparisons below retain their original scope.
+
 **量測日期 / Measured: 2026-10-22.** 同一程式、資料與流程，DeepSeek 和 Poe Sonnet 最終均通過 82 項檢查。操作設定以 [README 模型設定](README.md#model-configuration) 為準。
 These are recorded acceptance results, not a current provider availability guarantee.
 

@@ -154,12 +154,12 @@ flowchart TD
     Trace --> DB
 ```
 
-1. **檢索 / Retrieval:** 六份 CSV 初始化關聯資料；診所、醫生與療程建立 FTS5 索引。模型改寫查詢，後端以精確 ID 或 BM25 取出證據，再生成回答。目前沒有向量嵌入或向量資料庫。 / Catalog records support exact-ID lookup and lexical retrieval; selected evidence grounds answers. No dense embeddings or vector database are implemented.
+1. **檢索 / Retrieval:** 六份 CSV 初始化關聯資料；診所、醫生與療程建立 FTS5 索引。模型改寫查詢，後端以精確 ID 或 BM25 取出證據，再生成回答。目前沒有向量嵌入或向量資料庫。 / Catalog records support exact-ID lookup and lexical retrieval; selected evidence grounds answers. No dense embeddings or vector database are implemented. Knowledge generation also receives the complete small catalog to distinguish retrieval gaps from catalog absence.
 2. **對話 / Conversation:** 模型輸出結構化意圖與欄位，後端管理持久化草稿、欄位撤回、暫停及確認。中途查詢不丟失預約進度。 / Structured model output is combined with persisted draft state, explicit field clearing and submission controls.
 3. **寫入 / Booking:** REST 驗證醫生、服務相容性及診所當地日期時間；交易與冪等鍵避免相同請求重複建立預約。 / REST validation and transactional idempotency protect booking writes. Success messages come from saved results.
 4. **摘要與追蹤 / Summary and tracing:** 摘要驗證四欄結構及原文引句；本機追蹤保存模型呼叫中繼資料。 / Summary output is checked against transcript evidence; local traces retain call metadata.
 
-小型目錄目前完整提供給意圖路由模型，回答階段再使用選定證據；資料量擴大時需先檢索候選。架構與取捨詳見 [TECH_DOC.md](TECH_DOC.md)。 / Routing currently receives the small catalog in full; larger catalogs would require candidate retrieval before routing.
+小型目錄目前完整提供給意圖路由與知識回答模型，回答另使用選定證據；資料量擴大時需先檢索候選。架構與取捨詳見 [TECH_DOC.md](TECH_DOC.md)。 / Routing and knowledge generation currently receive the small catalog in full; larger catalogs would require candidate retrieval before routing.
 
 <a id="demo"></a>
 ## 示範流程 / Demo walkthrough
@@ -187,16 +187,17 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 **2026-10-23 提交前複核通過。** 從公開 GitHub 乾淨副本完成安裝、建置、隔離啟動與瀏覽器演示，詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
 **Submission review passed on October 23, 2026**, using a fresh public clone and isolated runtime.
 
-**後續 64 場景測試發現未解決問題：**完整英文預約偶發停留於草稿，另有新增後查詢的矛盾措辭；暫不應將先前有限驗收解讀為可以無條件提交。 / The later 64-scenario review found an unresolved English booking execution failure and a contradictory follow-up answer. See [the findings](DIVERSE_QUESTIONS_REPORT.md) before submission.
+**後續問題已修復並定向驗證：**英文預約、查詢矛盾、MRI 證據範圍與顯示格式的修復通過 112 項針對性檢查及 82 項完整流程檢查；未重跑全部 64 場景。 / See [FIX_VALIDATION.md](FIX_VALIDATION.md) for the fixes, targeted retest and remaining boundaries.
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合測試 / Backend tests | 110 passed |
+| 後端單元／整合測試 / Backend tests | 118 passed |
 | 前端單元／元件測試 / Frontend tests | 28 passed |
 | 前端正式建置 / Production build | Passed |
 | DeepSeek 完整流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
-| DeepSeek 暫緩／撤回 / Hold and withdrawal cases | 27/27 checks, 2026-10-23 |
+| DeepSeek 修復定向驗證 / Targeted fix regression | 112/112 checks, 11 scenarios / 20 turns, 2026-10-23 |
 | 常見問法 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations in the review report |
+| 修復說明 / Fix validation | [Changes and retest](FIX_VALIDATION.md) |
 | 擴大情境 / Diverse scenarios | [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md); mechanical results and open response-quality findings are reported separately |
 | Poe Sonnet 歷史對照 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun in this review |
 

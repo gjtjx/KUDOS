@@ -45,6 +45,8 @@ async def summarize(transcript):
         traces.append(trace)
         try:
             summary,evidence=validate_result(result,transcript)
+            from .presentation import display_text
+            summary = {key: display_text(value) if value is not None else None for key, value in summary.items()}
             return {'summary':summary,'evidence':evidence,'mode':'llm','tool_trace':traces,
                     'notice':'僅整理原文，請由醫護人員核對。 / Source extraction only; clinician review required.'}
         except (ProviderError,ValueError,KeyError,TypeError,IndexError) as error:

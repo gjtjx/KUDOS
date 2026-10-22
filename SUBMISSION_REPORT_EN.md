@@ -72,7 +72,7 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The October 23 fresh-clone review recorded **110 backend tests and 28 frontend tests passing**, with a successful production build. DeepSeek passed **82 core checks** and **27 hold/withdrawal checks** after fixes. Poe Sonnet's **82-check result is historical, from October 22**, and was not rerun in this review. See [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) for findings and browser evidence.
+The October 23 fresh-clone review recorded **118 backend tests and the unchanged prior 28 frontend tests passing**, with a successful production build. DeepSeek passed **82 core checks** and **27 hold/withdrawal checks** after fixes. Poe Sonnet's **82-check result is historical, from October 22**, and was not rerun in this review. Later broad testing exposed failures that were corrected and retested with 112 targeted checks plus 82 full checks; see [FIX_VALIDATION.md](FIX_VALIDATION.md). The whole 64-case suite was not rerun. See [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) for earlier browser evidence.
 
 These checks cover fourteen chat turns, two transcript summaries, persistence, restart, deduplication, corrections and trace accounting. They are not 82 independent clinical cases or a general model benchmark. Earlier failures were retained and informed regression fixes, including an auxiliary-word retrieval match and over-cautious interpretation of selecting booking details.
 

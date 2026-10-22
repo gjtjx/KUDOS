@@ -1,21 +1,21 @@
 # 測試與驗收 / Validation
 
 **最新提交複核 / Latest submission review: 2026-10-23.**
-本頁最新結果對應本次檢索及路由提示修正後的版本；乾淨安裝與瀏覽器證據見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)。2026-10-22 的兩模型比較另保留為歷史結果。
+本頁最新結果對應授權引文、後端狀態回答與顯示正規化修正；[修復驗證](FIX_VALIDATION.md)記錄 118 項後端測試、112 項定向與 82 項完整流程結果；乾淨安裝與瀏覽器證據見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)。2026-10-22 的兩模型比較另保留為歷史結果。
 Current results include the fixes found during the fresh-clone review; the earlier provider comparison remains dated separately.
 
 ## 1. 最新結果 / Latest recorded results
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合 / Backend unit and integration | 110 passed |
+| 後端單元／整合 / Backend unit and integration | 118 passed |
 | 前端單元／元件 / Frontend unit and component | 28 passed |
-| 自動化測試合計 / Automated test total | 138 passed |
-| 後端行／分支合併覆蓋率 / Backend combined coverage | 98.01% |
+| 自動化測試合計 / Automated test total | 146 passed |
+| 後端行／分支合併覆蓋率 / Backend combined coverage | 97.64% |
 | 前端覆蓋率 / Frontend coverage | Lines/functions 100%; statements 99.23%; branches 93.83% |
 | React 正式建置 / Production build | Passed |
 | DeepSeek 真實核心流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
-| DeepSeek 暫緩／撤回 / Hold and withdrawal | 27/27 checks, 2026-10-23 |
+| DeepSeek 修復回歸 / Fix regressions | 112/112 checks, 11 scenarios / 20 turns |
 | 常見問題 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations |
 | Poe Sonnet 歷史流程 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun |
 | 部署設定離線驗證 / Offline deployment validation | 2 Compose files, 5 Kubernetes resources |
@@ -23,12 +23,14 @@ Current results include the fixes found during the fresh-clone review; the earli
 | 雲端 CI / Cloud CI | 無本版成功證據 / No successful run claimed for this implementation |
 
 環境 / Environment: Windows, Python 3.13, Node 22.15, Vite 6.4.5, Vitest 4.1.12.
+本次為後端修復；前端未變動，28 項結果保留自先前驗證，本次未重跑。 / Frontend results are retained from the unchanged earlier build, not rerun in this backend fix.
 覆蓋率反映程式執行路徑，不是自然語言理解或臨床正確率。 / Coverage is not language or clinical accuracy.
 
 ## 2. 測試分層與責任 / Test layers and coverage
 
 | 層次 / Layer | 位置 / Location | 涵蓋範圍 / Coverage |
 |---|---|---|
+| 回答修復 / Answer regressions | [test_answer_regressions.py](backend/tests/test_answer_regressions.py) | Authorization provenance, held drafts, authoritative lookup, catalog scope, formatting and verbatim evidence |
 | 核心單元 / Core units | [test_units.py](backend/tests/test_units.py) | 路由、欄位、回答、翻譯、檢索與驗證 / Routing, slots, answers, localization, retrieval |
 | API／資料 / API and database | [test_app.py](backend/tests/test_app.py)、[test_regressions.py](backend/tests/test_regressions.py) | 真實 SQLite、種子、FTS、狀態、持久化、錯誤與重試 / Persistence and API regressions |
 | 提交與邊界 / Submission controls | [test_extended.py](backend/tests/test_extended.py) | hold、撤回、更正、跨輪／重啟、併發重試／衝突 / Consent, state and idempotency boundaries |
