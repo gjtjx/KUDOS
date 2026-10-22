@@ -130,6 +130,10 @@ def main():
                 check(label + " existing unchanged", all(row in after for row in originals))
                 if r.status_code == 200:
                     check(label + " real model", any(t["tool"] == "LLM route_intent" for t in result["tool_trace"]))
+                    reviewer = globals().get('REVIEW_RESPONSE')
+                    if reviewer:
+                        for review_name, passed in reviewer(name, message, result, app):
+                            check(label + ' review/' + review_name, passed)
                     for k, v in expected.items():
                         if k == "draft":
                             check(label + " draft", all(result["draft"].get(a) == b for a,b in v.items()))

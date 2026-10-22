@@ -154,8 +154,8 @@ flowchart TD
     Trace --> DB
 ```
 
-1. **檢索 / Retrieval:** 六份 CSV 初始化關聯資料；診所、醫生與療程建立 FTS5 索引。模型改寫查詢，後端以精確 ID 或 BM25 取出證據，再生成回答。目前沒有向量嵌入或向量資料庫。 / Catalog records support exact-ID lookup and lexical retrieval; selected evidence grounds answers. No dense embeddings or vector database are implemented. Knowledge generation also receives the complete small catalog to distinguish retrieval gaps from catalog absence.
-2. **對話 / Conversation:** 模型輸出結構化意圖與欄位，後端管理持久化草稿、欄位撤回、暫停及確認。中途查詢不丟失預約進度。 / Structured model output is combined with persisted draft state, explicit field clearing and submission controls.
+1. **檢索 / Retrieval:** 六份 CSV 初始化關聯資料；診所、醫生與療程建立 FTS5 索引。模型改寫查詢，後端以精確 ID 或 BM25 取出證據，再生成回答。目前沒有向量嵌入或向量資料庫。 / Catalog records support exact-ID lookup and lexical retrieval; selected evidence grounds answers. Generated knowledge replies use validated zh/en paragraph pairs internally; the public reply remains plain text. No dense embeddings or vector database are implemented. Knowledge generation also receives the complete small catalog to distinguish retrieval gaps from catalog absence.
+2. **對話 / Conversation:** 模型輸出結構化意圖與欄位，後端管理持久化草稿、欄位撤回、暫停及確認。中途查詢不丟失預約進度。 / Structured model output is combined with persisted draft state, explicit field clearing and submission controls. Pure closing messages cannot mutate booking state after routing.
 3. **寫入 / Booking:** REST 驗證醫生、服務相容性及診所當地日期時間；交易與冪等鍵避免相同請求重複建立預約。 / REST validation and transactional idempotency protect booking writes. Success messages come from saved results.
 4. **摘要與追蹤 / Summary and tracing:** 摘要驗證四欄結構及原文引句；本機追蹤保存模型呼叫中繼資料。 / Summary output is checked against transcript evidence; local traces retain call metadata.
 
@@ -184,21 +184,22 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 <a id="testing"></a>
 ## 測試與驗證 / Testing
 
-**2026-10-23 完整回歸已完成，仍有對話品質發現待改善。** 從公開 GitHub 乾淨副本完成安裝、建置、隔離啟動與瀏覽器演示，詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
-**Submission review completed on October 23, 2026**, using a fresh public clone and isolated runtime; see the later full retest for open findings.
+**2026-10-23 剩餘問題已修復，完整回歸通過。** 本輪涵蓋 64 場景、83 輪真實對話；歷史乾淨安裝與瀏覽器演示見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
+**Remaining fixes and full retest passed on October 23, 2026**; see [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md) for the tested scope and retained historical evidence.
 
-**完整 64 場景已重新執行：**83 輪對話、376/376 項原有檢查通過；英文預約與查詢矛盾未復發，但謝語誤開草稿、語言過度斷言、雙語不完整等問題仍需改善。 / [Full retest](FULL_REGRESSION_REPORT.md): mechanical checks pass, while conversational/state review retains open findings; this is not a clean no-regression claim. Earlier fixes and focused checks are retained in [FIX_VALIDATION.md](FIX_VALIDATION.md).
+**完整複測：525/525 項檢查通過**，包括原有 376 項及新增 149 項狀態／雙語／格式／資格檢查；8 筆預期預約全部寫入。結束語誤開草稿、語言過度否定、英文缺失及不合資格選項在本輪未復發。 / All 64 scenarios passed the strengthened checks; [the report](REMAINING_FIXES_REPORT.md) separates mechanical checks from human content review and states the limits.
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合測試 / Backend tests | 118 passed |
+| 後端單元／整合測試 / Backend tests | 130 passed |
 | 前端單元／元件測試 / Frontend tests | 28 passed |
 | 前端正式建置 / Production build | Passed |
 | DeepSeek 完整流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
 | DeepSeek 修復定向驗證 / Targeted fix regression | 112/112 checks, 11 scenarios / 20 turns, 2026-10-23 |
 | 常見問法 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations in the review report |
 | 修復說明 / Fix validation | [Changes and retest](FIX_VALIDATION.md) |
-| 完整修復後複測 / Full retest | [64 scenarios / 83 turns](FULL_REGRESSION_REPORT.md); 376/376 mechanical checks, open response/state findings |
+| 完整修復後複測 / Full retest | [64 scenarios / 83 turns](REMAINING_FIXES_REPORT.md); 525/525 checks: 376 original + 149 added |
+| 最新修復 / Latest fixes | [Changes, full inventory and evidence](REMAINING_FIXES_REPORT.md) |
 | 修復前歷史 / Pre-fix history | [Original failures](DIVERSE_QUESTIONS_REPORT.md) retained |
 | Poe Sonnet 歷史對照 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun in this review |
 

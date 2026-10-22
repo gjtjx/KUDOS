@@ -1,6 +1,6 @@
 # 需求核對 / Requirements Review
 
-最新修復與驗證 / Latest fixes and retest: [FIX_VALIDATION.md](FIX_VALIDATION.md). Earlier counts and provider comparisons below retain their original scope.
+最新修復與驗證 / Latest fixes and retest: [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md). Earlier counts and provider comparisons below retain their original scope.
 
 文件核對：2026-10-23；最近功能驗收：2026-10-23。
 Documentation reviewed October 23, 2026; latest functional acceptance is dated October 23.

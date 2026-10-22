@@ -32,7 +32,7 @@ class ExtendedTests(unittest.TestCase):
     def action(self, args, key=None):
         self.counter += 1
         call = {"tool_calls": [{"function": {"name": "route_intent", "arguments": json.dumps(args)}}]}
-        with patch.object(self.app.state.agent, "llm", AsyncMock(side_effect=[call, {"content": "草稿尚未提交 / Draft not submitted"}])):
+        with patch.object(self.app.state.agent, "llm", AsyncMock(side_effect=[call, {"content": json.dumps({'paragraphs':[{'zh':'草稿尚未提交','en':'Draft not submitted'}]})}])):
             return self.client.post("/api/chat", json={"message": "test turn", "session_id": "edge", "request_id": key or str(self.counter)})
 
     def test_complete_draft_on_hold_requires_explicit_confirmation(self):

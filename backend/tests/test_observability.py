@@ -45,7 +45,7 @@ class ObservabilityTests(unittest.TestCase):
 
     def replies(self):
         return [response(routed(), {"prompt_tokens": 20, "completion_tokens": 5}),
-                response({"content": "private-answer-canary"}, {"prompt_tokens": 30, "completion_tokens": 7})]
+                response({"content": json.dumps({'paragraphs':[{'zh':'診所資訊','en':'private-answer-canary'}]})}, {"prompt_tokens": 30, "completion_tokens": 7})]
 
     def test_real_transport_spans_and_metadata_only_storage(self):
         with patch("app.llm.httpx.AsyncClient.post", AsyncMock(side_effect=self.replies())):

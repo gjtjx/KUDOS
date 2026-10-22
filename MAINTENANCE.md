@@ -109,3 +109,7 @@ Provider status and application HTTP status are distinct.
 Live regressions require matching credentials and preserved failure evidence.
 
 目前驗收範圍見 VALIDATION；雲端 CI 的先前帳號限制與容器 runtime 未驗收，不能用本機測試結果替代。
+
+## 雙語生成校驗 / Bilingual generation validation
+
+`invalid_bilingual_answer` means the provider failed the internal paragraph/language checks after one repair. Verify the configured provider/model, preserve the failed isolated report and reproduce with the scenario ID. Do not bypass validation or paste credentials into logs. The public reply remains text; no frontend migration is needed. See [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md).

@@ -1,5 +1,7 @@
 # 64 場景真實模型測試 / 64-scenario live review
 
+**後續狀態 / Follow-up:** The findings in this historical phase were subsequently addressed and retested; [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md) records the 525-check complete rerun. Original failures and counts below are preserved.
+
 **後續修復 / Follow-up:** [FIX_VALIDATION.md](FIX_VALIDATION.md) records the later code changes, 112 targeted checks and 82 full-flow checks. The original failures and observations below remain historical evidence. The subsequent [full 64-scenario retest](FULL_REGRESSION_REPORT.md) passed 376 original mechanical checks but retained response/state findings.
 
 日期 / Date: **2026-10-23 (Asia/Shanghai)**. Application baseline: `b88be42`. Provider: `deepseek-flash`, Responses, automatic tool choice, non-strict tools. This adds a distinct broad test suite; earlier reports remain dated separately.

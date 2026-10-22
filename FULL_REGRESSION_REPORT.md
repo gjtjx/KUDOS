@@ -1,5 +1,7 @@
 # 完整 64 場景修復後複測 / Full 64-scenario retest
 
+**後續狀態 / Follow-up:** The findings in this historical phase were subsequently addressed and retested; [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md) records the 525-check complete rerun. Original failures and counts below are preserved.
+
 Date: **2026-10-23 (Asia/Shanghai)**. Tested application: **`8e2e2d09b1f4b93f674bfd7deba64f2bb50c54f7`**. Real provider: **deepseek-flash**, Responses, automatic tool choice, non-strict tools. No application logic or test expectations changed during this retest.
 
 ## 結論 / Decision

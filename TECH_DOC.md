@@ -30,6 +30,7 @@ Each turn reads current bookings through REST. ASGITransport dispatches through 
 | 模組 / Module | 責任 / Responsibility |
 |---|---|
 | [main.py](backend/app/main.py) | API、錯誤處理、交易與前端服務 / API, errors, transactions, static serving |
+| [generation.py](backend/app/generation.py)、[conversation.py](backend/app/conversation.py) | 雙語結構校驗、有限修復、結束語狀態保護及合資格選項 / Validated bilingual generation and conversation invariants |
 | [agent.py](backend/app/agent.py) | 路由、上下文、草稿與工具編排 / Routing, context, drafts, tools |
 | [knowledge.py](backend/app/knowledge.py) | ID 關聯查詢、FTS5/BM25 / Catalog retrieval |
 | [llm.py](backend/app/llm.py) | Responses / Chat Completions、相容設定及安全錯誤 / Provider adapter |
@@ -54,7 +55,7 @@ Local mode is an explicit deterministic demo, not an automatic fallback for prov
 | `cancel_draft` | 清除未提交草稿；不修改已確認預約 / Discard only the pending draft |
 
 Session 綁定 P001，保存 `active`、`draft`、`booking_hold` 和最多 20 則歷史訊息；模型使用最近 12 則歷史訊息。這是訊息數，不是問答輪數；結構化草稿可保留更早的選擇。
-Sessions retain bounded history and structured booking state, not unlimited conversational memory.
+Sessions retain bounded history and structured booking state, not unlimited conversational memory. After actual model routing, narrowly matched pure closing messages preserve booking state; mixed closing/new instructions are not intercepted. Missing-field service options exclude adult-ineligible T002, matching the existing API rule.
 
 `route_intent` 輸出意圖、`search_query`、四欄位、`clear_slots`、`booking_action`，以及可回溯使用者原文的 `authorization_quote`／`hold_quote`。主機驗證引文來源；具授權依據的完整、未暫緩草稿可修正誤判的 collect；既有 hold 不會因此解除。主機依序處理：
 The host processes the routing result in this order:
@@ -76,6 +77,8 @@ Invalid routing structure allows one bounded retry before side effects. Host val
 - 回答模型根據檢索內容生成；病史與預約另外注入，不進通用知識索引。 / Patient context is separate from the general knowledge index.
 
 目前沒有 embedding、向量資料庫或 reranker。路由與知識回答均看到完整小型目錄；回答另外使用選定證據，避免把局部檢索缺失當作整份目錄缺失。大資料量應先取候選並標明檢索範圍。來源標籤不等於每句生成內容已自動驗真。
+Knowledge and visit replies are generated as internal JSON zh/en paragraph pairs, validated for both languages, catalog-name/word usage and the observed unsafe negative-language/approval patterns, then rendered as text. One bounded repair is allowed; a second invalid result returns an explicit provider error. These checks do not prove translation equivalence or general semantic truth.
+
 No dense retrieval is implemented. Full-catalog context is a scaling limitation, and citations are not sentence-level fact verification. Booking lookup, missing-field prompts and saved/rejected confirmations use authoritative backend text after real model routing; knowledge and visit guidance retain model generation.
 
 FTS5 的優點是本機、可解釋且易驗證，代價是同義詞與口語召回有限。未來可比較 BM25 與混合檢索，但須使用標註題庫衡量召回、無答案行為及延遲，不能假定向量化必然更好。

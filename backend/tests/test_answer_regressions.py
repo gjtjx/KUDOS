@@ -16,7 +16,9 @@ FULL = dict(doctor_id='D104', treatment_id='T005', booking_date='2035-12-10', bo
 
 class AnswerRegressions(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(dir=ROOT / 'runtime/tests')
+        folder = ROOT / 'runtime/tests'
+        folder.mkdir(parents=True, exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(dir=folder)
         with patch.dict(os.environ, {'AI_MODE': 'local'}):
             self.app = create_app(Path(self.temp.name) / 'test.db', ROOT / 'mock-data')
         self.app.state.agent.mode = 'llm'
@@ -26,7 +28,9 @@ class AnswerRegressions(unittest.TestCase):
 
     def chat(self, text, action, answer='錯誤回答 / Wrong answer', key='1'):
         call = {'tool_calls': [{'function': {'name': 'route_intent', 'arguments': json.dumps(action)}}]}
-        with patch.object(self.app.state.agent, 'llm', AsyncMock(side_effect=[call, {'content': answer}])) as model:
+        zh, en = answer.split(' / ', 1)
+        output = {'content': json.dumps({'paragraphs': [{'zh': zh, 'en': en}]})}
+        with patch.object(self.app.state.agent, 'llm', AsyncMock(side_effect=[call, output])) as model:
             result = self.client.post('/api/chat', json={'message': text, 'session_id': 'regression', 'request_id': key})
         return result, model
 
@@ -70,7 +74,7 @@ class AnswerRegressions(unittest.TestCase):
     def test_clinic_only_retrieval_does_not_hide_service_inventory(self):
         r, model = self.chat('Do you have MRI? What price?', {'intent': 'knowledge', 'search_query': 'C001'}, '目錄沒有列出 MRI。 / MRI is not listed.')
         system = model.call_args_list[-1].args[0][0]['content']
-        evidence = json.loads(system.split('Evidence: ', 1)[1])
+        evidence, _ = json.JSONDecoder().raw_decode(system.split('Evidence: ', 1)[1])
         self.assertEqual(len(evidence['sources']), 1)
         self.assertEqual(len(evidence['catalog_inventory']['treatments']), 5)
         self.assertEqual(evidence['catalog_inventory']['treatments'][0]['price_usd'], 150)

@@ -11,6 +11,8 @@ from .llm import complete, configuration, ProviderError
 from .localization import normalize_input, translated_value, STATUS
 from .answers import is_visit_flow, visit_answer, upcoming_bookings, local_answer
 from .presentation import display_text
+from .generation import generate_answer
+from .conversation import is_closing, booking_labels
 
 SLOTS = ("doctor_id", "treatment_id", "booking_date", "booking_time")
 ALIASES = {"D101": "sarah|jenkins|莎拉", "D102": "michael|chang|张",
@@ -77,6 +79,7 @@ class Agent:
                 "You are a clinic booking router. Always call route_intent exactly once; never respond as plain text. Today (New York): " + str(datetime.now(ZoneInfo("America/New_York")).date()) +
                 ". Route queries about existing appointments to bookings, explicit new bookings or active draft answers to book. "
                 "General questions about the overall visit journey, arrival or check-in are visit_flow, never an instruction to book. Questions about preparation for a specific treatment, skin consultation, fasting, medication or what to bring for that service are knowledge, even when phrased as before I go. Retrieve the selected treatment from the active draft or history; do not replace this with a general visit journey. "
+                "Pure thanks or that is all is knowledge, never a new booking or a draft answer. Completed booking requests in history are consumed; do not reactivate them on a closing turn. "
                 "An unrelated clinic question remains knowledge even during booking. Cancel only the draft, not existing appointments. "
                 "Cancellation policies or requests to cancel confirmed bookings are knowledge; existing cancellation is unsupported. "
                 "Rescheduling an existing booking is also unsupported: route to knowledge and NEVER create a replacement. "
@@ -191,7 +194,12 @@ class Agent:
         routed_calls = len(self.llm_calls)
         intent = action["intent"]
         created = None
-        if intent == "cancel_draft":
+        closing = is_closing(message)
+        if closing:
+            intent = "knowledge"
+            reply = "不客氣，如有其他需要，隨時告訴我。\nYou are welcome. Let me know if you need anything else."
+            trace.append({"tool": "conversation.closing", "status": "ok"})
+        elif intent == "cancel_draft":
             state.update(draft={}, active=False, booking_hold=False)
             reply = "已取消本次預約草稿，已有預約保持不變。 / Booking draft cleared; existing appointments are unchanged."
         elif intent == "bookings":
@@ -217,9 +225,7 @@ class Agent:
                 state["booking_hold"] = False
             allowed = permission in ("submit", "confirm") and not state.get("booking_hold", False)
             missing = [key for key in SLOTS if not draft.get(key)]
-            labels = {"doctor_id": "醫生 / Doctor (D101 Sarah, D102 Michael, D103 Elena, D104 James)",
-                      "treatment_id": "服務 / Treatment (T001 體檢 / Checkup, T002 兒童疫苗 / Pediatric vaccination, T003 皮膚科 / Dermatology, T004 流感疫苗 / Flu shot, T005 關節諮詢 / Joint consultation)",
-                      "booking_date": "日期 / Date (YYYY-MM-DD)", "booking_time": "診所當地時間 / Clinic-local time (HH:MM)"}
+            labels = booking_labels(catalog)
             if missing:
                 reply = "請補充預約資訊 / To finish your booking, please provide:\n" + "\n".join(labels[k] for k in missing)
             elif not allowed:
@@ -241,8 +247,8 @@ class Agent:
             reply = local_answer(message, sources, profile, catalog)
         # The model owns language understanding and conversational answers in LLM mode.
         # Saved/rejected booking confirmations remain authoritative API results.
-        if self.mode == "llm" and intent in ("knowledge", "visit_flow"):
-            result = await self.llm([{"role":"system", "content":
+        if self.mode == "llm" and not closing and intent in ("knowledge", "visit_flow"):
+            reply = await generate_answer(self.llm, [{"role":"system", "content":
                 "You are a clinic service assistant. Always answer with paired Traditional Chinese (zh-Hant) and English, Traditional Chinese first and English immediately following each paragraph. Never use Simplified Chinese. "
                 "Write the paired text directly, without language labels, invented city prefixes or repeated source lines. "
                 "Use literal newlines, never escaped newline text or HTML tags. Preserve doctor full_name exactly as stored; never translate or invent a Chinese personal name. "
@@ -274,10 +280,7 @@ class Agent:
                     "doctor_treatment_mapping":MATCHES,
                     "booking_source":"GET /api/bookings (live database, not CSV)",
                     "reference_facts":reply if intent != "knowledge" else None}, ensure_ascii=False)},
-                *state["history"][-12:], {"role":"user", "content":message}])
-            if not isinstance(result.get("content"), str) or not result["content"].strip():
-                raise ValueError("Empty model answer")
-            reply = result["content"].strip()
+                *state["history"][-12:], {"role":"user", "content":message}], catalog, state.get("booking_hold", False))
             trace.extend(self.llm_calls[routed_calls:])
         if self.mode == 'llm':
             reply = display_text(reply, catalog['doctors'])

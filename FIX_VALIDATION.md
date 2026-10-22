@@ -1,5 +1,7 @@
 # 回歸修復驗證 / Regression fix validation
 
+**後續狀態 / Follow-up:** The findings in this historical phase were subsequently addressed and retested; [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md) records the 525-check complete rerun. Original failures and counts below are preserved.
+
 Date: **2026-10-23 (Asia/Shanghai)**. Fixes follow the failed broad review at `03c67a5`. Original failures remain in [DIVERSE_QUESTIONS_REPORT.md](DIVERSE_QUESTIONS_REPORT.md); they have not been rewritten as passes.
 
 ## 修復 / Changes

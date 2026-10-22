@@ -1,24 +1,24 @@
 # 測試與驗收 / Validation
 
 **最新提交複核 / Latest submission review: 2026-10-23.**
-本頁最新結果對應授權引文、後端狀態回答與顯示正規化修正；[修復驗證](FIX_VALIDATION.md)記錄 118 項後端測試、112 項定向與 82 項完整流程結果；乾淨安裝與瀏覽器證據見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)。2026-10-22 的兩模型比較另保留為歷史結果。
+本頁最新結果對應結束語狀態保護、雙語結構校驗與資格過濾；完整結果見 [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md)。先前失敗與模型比較保留為歷史證據。
 Current results include the fixes found during the fresh-clone review; the earlier provider comparison remains dated separately.
 
-最新完整 64 場景複測 / Latest full retest: [FULL_REGRESSION_REPORT.md](FULL_REGRESSION_REPORT.md), tested `8e2e2d0`. All 376 original checks passed; response/state review found open issues. Unit/frontend results below retain their earlier scope; those suites were not rerun during this report-only retest.
+最新完整複測 / Latest full retest: **64 scenarios / 83 turns / 525 checks passed**, including 149 new response/state checks. Backend tests were rerun (130 passed); unchanged frontend results retain their earlier scope. See [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md).
 
 ## 1. 最新結果 / Latest recorded results
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合 / Backend unit and integration | 118 passed |
+| 後端單元／整合 / Backend unit and integration | 130 passed |
 | 前端單元／元件 / Frontend unit and component | 28 passed |
-| 自動化測試合計 / Automated test total | 146 passed |
-| 後端行／分支合併覆蓋率 / Backend combined coverage | 97.64% |
+| 自動化測試合計 / Automated test total | 158 (130 backend current + 28 frontend retained) |
+| 後端行／分支合併覆蓋率 / Backend combined coverage | 97.53% |
 | 前端覆蓋率 / Frontend coverage | Lines/functions 100%; statements 99.23%; branches 93.83% |
 | React 正式建置 / Production build | Passed |
 | DeepSeek 真實核心流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
 | DeepSeek 修復回歸 / Fix regressions | 112/112 checks, 11 scenarios / 20 turns |
-| 修復後完整複測 / Full post-fix retest | 64 scenarios / 83 turns; 376/376 original checks; open response/state findings |
+| 修復後完整複測 / Full post-fix retest | 64 scenarios / 83 turns; 525/525 checks (376 original + 149 new) |
 | 常見問題 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations |
 | Poe Sonnet 歷史流程 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun |
 | 部署設定離線驗證 / Offline deployment validation | 2 Compose files, 5 Kubernetes resources |
@@ -33,6 +33,7 @@ Current results include the fixes found during the fresh-clone review; the earli
 
 | 層次 / Layer | 位置 / Location | 涵蓋範圍 / Coverage |
 |---|---|---|
+| 最新狀態／雙語回歸 / State and bilingual regressions | [test_remaining_regressions.py](backend/tests/test_remaining_regressions.py) | Closing invariants, eligibility, negative inference, bounded bilingual repair and contextual characters |
 | 回答修復 / Answer regressions | [test_answer_regressions.py](backend/tests/test_answer_regressions.py) | Authorization provenance, held drafts, authoritative lookup, catalog scope, formatting and verbatim evidence |
 | 核心單元 / Core units | [test_units.py](backend/tests/test_units.py) | 路由、欄位、回答、翻譯、檢索與驗證 / Routing, slots, answers, localization, retrieval |
 | API／資料 / API and database | [test_app.py](backend/tests/test_app.py)、[test_regressions.py](backend/tests/test_regressions.py) | 真實 SQLite、種子、FTS、狀態、持久化、錯誤與重試 / Persistence and API regressions |
@@ -44,7 +45,7 @@ Current results include the fixes found during the fresh-clone review; the earli
 | 真實核心流程 / Live core flow | [live_acceptance.py](scripts/live_acceptance.py) | 真實供應商、REST／SQL、持久化與追蹤 / End-to-end provider acceptance |
 | 真實額外情境 / Live edge cases | [expanded_acceptance.py](scripts/expanded_acceptance.py) | 暫緩、撤回、歧義、引用與摘要 / Expanded behavioral cases |
 | 常見問法 / Common questions | [common_questions_acceptance.py](scripts/common_questions_acceptance.py) | 16 scenarios / 20 turns; inspect response content as well as assertions |
-| 擴大情境 / Diverse scenarios | [diverse_questions_acceptance.py](scripts/diverse_questions_acceptance.py) | 64 scenarios / 83 turns; [results and open findings](DIVERSE_QUESTIONS_REPORT.md) |
+| 擴大情境 / Diverse scenarios | [diverse_questions_acceptance.py](scripts/diverse_questions_acceptance.py) | 64 scenarios / 83 turns; [latest results and historical findings](REMAINING_FIXES_REPORT.md) |
 
 單元／整合測試中的受控模型輸出驗證應用邏輯；真實模型測試另外驗證供應商與實際語言行為，兩者不可互相替代。
 Mocked contracts and live-provider evidence answer different questions.

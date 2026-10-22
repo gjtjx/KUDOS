@@ -155,7 +155,7 @@ class AppTests(unittest.TestCase):
         self.assertEqual(catalog["doctors"][0]["zh"]["specialty"], "全科")
         self.app.state.agent.mode = "llm"
         route = {"tool_calls":[{"function":{"name":"route_intent","arguments":json.dumps({"intent":"knowledge"})}}]}
-        with patch.object(self.app.state.agent, "llm", AsyncMock(side_effect=[route, {"content":"診所資訊 / Clinic information"}])) as model:
+        with patch.object(self.app.state.agent, "llm", AsyncMock(side_effect=[route, {"content":json.dumps({'paragraphs':[{'zh':'診所資訊','en':'Clinic information'}]})}])) as model:
             self.chat("診所營業時間")
             self.assertIn("paired Traditional Chinese", model.call_args_list[1].args[0][0]["content"])
 

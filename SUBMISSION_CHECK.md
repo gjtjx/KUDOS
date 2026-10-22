@@ -6,7 +6,7 @@
 
 **歷史擴大測試，後續修復見 [FIX_VALIDATION](FIX_VALIDATION.md) / Historical broad review, subsequently corrected:** [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md) originally found answer-quality issues: an overbroad claim from incomplete retrieved evidence, intermittent extra-confirmation wording and formatting/name-localization issues. Mechanical passes must not be interpreted as all response content being correct. This qualifies the bounded submission assessment below.
 
-**核心預約路徑已通過，但完整回歸仍有對話與雙語問題待修復。 / The core booking path passed; the full retest still has open conversational and bilingual findings.** See [FULL_REGRESSION_REPORT.md](FULL_REGRESSION_REPORT.md); do not claim a clean no-regression review. See [FIX_VALIDATION.md](FIX_VALIDATION.md). The full 64-scenario suite has now been rerun on `8e2e2d0`: 376 original checks passed, while response/state review found issues not covered by those checks. The earlier bounded review exercised required knowledge retrieval, patient context, multi-turn collection, REST booking persistence and React booking-list updates, but did not expose the later failure. Configure a valid provider key for the full natural-language and transcript demonstration; a fresh checkout defaults to limited local mode.
+**所列剩餘問題已修復並通過加強後的完整複測，可作為本機演示的 MVP 提交。 / The listed remaining issues were fixed and the strengthened full retest passed; ready as a locally demonstrated MVP.** See [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md): 64 scenarios, 83 turns, 525 checks, plus 130 backend tests and 82 core checks. Historical reviews below retain their original scope; no universal language/clinical or production-readiness claim is made. Configure a valid key for LLM mode; fresh installs default to local mode.
 
 This is a bounded review, not a guarantee for every model response. Cloud CI, container execution and Kubernetes cluster execution are not verified. Authentication, existing-booking cancellation/rescheduling, vector embeddings and audio transcription are outside the implemented scope; see [README.md](README.md).
 
@@ -18,7 +18,9 @@ This is a bounded review, not a guarantee for every model response. Cloud CI, co
 - Live DeepSeek browser: selected dermatologist/service, interrupted with a preparation question, supplied date/time with an explicit hold, then confirmed. The held draft created no record; confirmation created one record and updated the list.
 - A synthetic doctor-patient transcript produced all four fields with matching quotations, including an explicit statement that no medication was prescribed. The activity panel showed the actual `deepseek-flash` summary call, latency and tokens.
 
-## 3. 驗證結果 / Results
+## 3. 當時驗證結果 / Earlier review results
+
+For current results use [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md); the table below records the earlier fresh-clone review.
 
 | Check | Result | Scope |
 |---|---|---|

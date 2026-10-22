@@ -4,6 +4,8 @@ Each scenario has its own seeded database. Inspect text as well as assertions.
 --only accepts comma-separated scenario IDs for bounded batches.
 """
 import expanded_acceptance as audit
+import json
+import re
 
 
 def single(name, message, expected=None, delta=0):
@@ -129,6 +131,38 @@ SCENARIOS = [
 ]
 assert len(SCENARIOS) == 64
 
+
+def review_response(name, message, result, app):
+    """Additional observable state/language checks, not clinical truth grading."""
+    from app.conversation import is_closing
+    from app.generation import validate_answer
+    reply = result['reply']
+    yield 'no_display_artifacts', not re.search(r'\\n|<br\s*/?>|(?<![一二三四五六七八九十幾兩多])隻有|此係統', reply, re.I)
+    if is_closing(message):
+        state = app.state.db.state(name)
+        yield 'closing_does_not_reopen_draft', result['intent'] != 'book' and not state.get('active') and not state.get('draft')
+    if result['intent'] == 'book' and not result.get('booking') and not any(t.get('status') == 'rejected' for t in result['tool_trace']):
+        yield 'eligible_options_only', 'T002' not in reply
+    if result['intent'] in ('knowledge', 'visit_flow'):
+        pairs = []
+        for paragraph in reply.split('\n\n'):
+            lines = paragraph.split('\n')
+            if len(lines) != 2:
+                yield 'validated_bilingual_pairs', False
+                return
+            pairs.append({'zh': lines[0], 'en': lines[1]})
+        catalog = {table: app.state.db.rows('SELECT * FROM ' + table) for table in ('doctors', 'clinics', 'treatments')}
+        try:
+            validate_answer(json.dumps({'paragraphs': pairs}), catalog, app.state.db.state(name).get('booking_hold', False))
+            valid = True
+        except ValueError:
+            valid = False
+        yield 'validated_bilingual_pairs', valid
+    if name == 'c13_sarah_language':
+        yield 'unlisted_language_remains_uncertain', bool(re.search(r'not (?:listed|recorded|included)|(?:does not|doesn.t) (?:list|include)|unlisted', reply, re.I))
+
+
 if __name__ == '__main__':
     audit.SCENARIOS = SCENARIOS
+    audit.REVIEW_RESPONSE = review_response
     audit.main()
