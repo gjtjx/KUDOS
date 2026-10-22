@@ -24,7 +24,7 @@ def retrieve(db, query):
     for pattern, terms in EXPANSIONS.items():
         if re.search(pattern, query, re.I):
             expanded += " " + terms
-    stopwords = {"or", "and", "the", "is", "are", "what", "how", "my", "can", "for", "to", "me", "with", "please", "do", "you"}
+    stopwords = {"or", "and", "the", "is", "are", "what", "how", "my", "can", "for", "to", "me", "with", "please", "do", "you", "have", "has", "had"}
     tokens = [t for t in dict.fromkeys(re.findall(r"[a-zA-Z0-9_]{2,}", expanded.lower())) if t not in stopwords][:30]
     if not tokens:
         return []

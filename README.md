@@ -39,7 +39,8 @@ A clinic assistant take-home project for grounded service Q&A, existing appointm
 
 - Python 3.10+（實測 / tested: 3.13）
 - Node.js 22.12+ 與 / and npm（實測 / tested Node: 22.15）
-- 首次安裝需網路；埠 8000 須可用。 / Internet for installation and an available port 8000.
+- 首次安裝需網路；埠 8000 須可用，已佔用時見下方替代埠命令。 / Internet for installation; use the alternate-port command below if port 8000 is occupied.
+- Windows 建議使用短路徑，例如 D:\ClinicPilot。過長路徑可能使 Kubernetes 測試依賴安裝失敗。 / Use a short Windows checkout path; long paths can prevent installation of Kubernetes validation dependencies.
 
 ### 2. 取得並啟動 / Clone and launch
 
@@ -81,6 +82,14 @@ macOS/Linux 使用 `python3`、`.venv/bin/python` 及 `npm` 取代相應命令�
 On macOS/Linux, substitute `python3`, `.venv/bin/python` and `npm`; those platforms have not been validated. For development, keep the backend running and run `npm run dev` inside `frontend/`. Vite proxies `/api` to port 8000.
 
 </details>
+
+若 8000 已有其他服務，安裝完成後可從根目錄改用 8018，不必停止原服務： / If port 8000 is occupied, use another port after setup:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --app-dir backend --host 127.0.0.1 --port 8018
+```
+
+改開 [應用程式 / App](http://127.0.0.1:8018) 及 [API 文件 / API docs](http://127.0.0.1:8018/docs)。 / Open the matching port in your browser.
 
 <a id="model-configuration"></a>
 ## 模型設定 / Model configuration
@@ -164,7 +173,7 @@ flowchart TD
 | 3. 查詢預約 / Existing bookings | “When is my next appointment?” | 讀取資料庫中未來且已確認的預約。 / Reads future confirmed bookings. |
 | 4. 多輪收集 / Slot collection | 新對話：“I want to book an appointment.” → “Dr. Sarah Jenkins for a checkup.” | 收集醫生與服務，再追問日期時間。 / Selects doctor/service and asks for missing fields. |
 | 5. 儲存與重載 / Save and reload | 輸入未來日期時間，例如 “2035-11-08 at 9:30 am”。 / Supply a future date and time. | 有效且獲授權的完整草稿寫入；更新列表，重載後仍存在。 / A valid, authorized draft is saved and persists after reload. |
-| 6. 摘要與追蹤 / Summary and tracing | 開啟逐字稿摘要，貼上文字；再查看模型使用紀錄。 / Paste a transcript, then inspect model activity. | 四欄摘要、引句及請求／模型呼叫紀錄。 / Four summary fields, evidence and traces. |
+| 6. 摘要與追蹤 / Summary and tracing | 啟用 LLM 後開啟逐字稿摘要、貼上文字，再查看模型使用紀錄。 / In LLM mode, paste a transcript and inspect model activity. | 四欄摘要、引句及請求／模型呼叫紀錄。 / Four summary fields, evidence and traces. |
 
 LLM 模式可另測「先不要提交」、撤回日期、插入服務準備事項問題，再確認提交。推薦本身不代表同意預約；取消草稿不會取消已建立的預約。
 
@@ -175,21 +184,23 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 <a id="testing"></a>
 ## 測試與驗證 / Testing
 
-最近記錄的驗收日期為 **2026-10-22**；以下是既有測試結果，不代表本次文件調整重新呼叫了模型。 / Recorded acceptance results as of **2026-10-22**; documentation edits do not imply a new live-provider run.
+**2026-10-23 提交前複核通過。** 從公開 GitHub 乾淨副本完成安裝、建置、隔離啟動與瀏覽器演示，詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
+**Submission review passed on October 23, 2026**, using a fresh public clone and isolated runtime.
 
-| 驗證 / Validation | 結果 / Recorded result |
+| 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合測試 / Backend unit and integration tests | 109 passed |
-| 前端單元／元件測試 / Frontend unit and component tests | 28 passed |
-| 前端正式建置 / Frontend production build | Passed |
-| DeepSeek 完整流程 / DeepSeek live acceptance | 82/82 checks passed |
-| Poe Sonnet 完整流程 / Poe Sonnet live acceptance | 82/82 checks passed |
+| 後端單元／整合測試 / Backend tests | 110 passed |
+| 前端單元／元件測試 / Frontend tests | 28 passed |
+| 前端正式建置 / Production build | Passed |
+| DeepSeek 完整流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
+| DeepSeek 暫緩／撤回 / Hold and withdrawal cases | 27/27 checks, 2026-10-23 |
+| 常見問法 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations in the review report |
+| Poe Sonnet 歷史對照 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun in this review |
 
-真實模型驗收使用相同程式與資料，涵蓋 14 輪對話、兩種逐字稿摘要、持久化、重試去重及追蹤。這是有限案例驗收，不是通用模型排名。雲端 CI 及容器／叢集執行尚未完成驗收。
+本次發現並修正本機詞彙檢索噪聲及模型對「確認醫生／服務」的過度暫緩；中間失敗報告保留。這是有限案例驗收，不是通用模型排名。雲端 CI 與容器／叢集執行仍未驗收。
+The review found and corrected lexical noise and an over-cautious routing interpretation. Failed runs are retained; runtime deployment and cloud CI remain unverified.
 
-Live acceptance uses the same application and fixtures across 14 chat turns and two summaries, including persistence, retry deduplication and tracing. It is a bounded acceptance suite, not a general model benchmark. Cloud CI and container/cluster runtime remain unverified.
-
-重跑命令、覆蓋率門檻與功能對照見 [VALIDATION.md](VALIDATION.md)；需要真實供應商的測試見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)，會消耗 API 額度。 / Test commands and coverage gates are maintained in the validation guide; live-provider tests are opt-in and consume API credits.
+重跑命令、覆蓋率及測試對照見 [VALIDATION.md](VALIDATION.md)。真實供應商測試見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)，會消耗 API 額度。 / Use the linked guides to reproduce local and paid live tests.
 
 <a id="deployment-and-scope"></a>
 ## 部署與限制 / Deployment and scope
@@ -252,6 +263,7 @@ compose.llm.yaml       LLM deployment override
 
 | 文件 / Document | 閱讀目的 / When to read |
 |---|---|
+| [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) | 最新提交前檢查、問題修正與演示證據。 / Latest submission-readiness review. |
 | [TECH_DOC.md](TECH_DOC.md) | 理解架構、設計取捨與假設。 / Architecture, tradeoffs and assumptions. |
 | [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md) | 對照原始作業要求與完成範圍。 / Requirement-by-requirement implementation status. |
 | [VALIDATION.md](VALIDATION.md) | 查看測試、覆蓋率與驗收限制。 / Tests, coverage and acceptance limits. |

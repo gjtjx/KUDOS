@@ -1,7 +1,7 @@
 # 需求核對 / Requirements Review
 
-文件核對：2026-10-23；最近功能驗收：2026-10-22。
-Documentation reviewed October 23, 2026; recorded functional acceptance is dated October 22.
+文件核對：2026-10-23；最近功能驗收：2026-10-23。
+Documentation reviewed October 23, 2026; latest functional acceptance is dated October 23.
 
 依據使用者提供的原始 `AI-interview-take-home-assignment.md`。本頁追蹤交付範圍；啟動方式見 [README](README.md)，數據與驗證邊界見 [VALIDATION](VALIDATION.md)。
 This page maps the original assignment to the implementation, not to production or clinical certification.
@@ -26,8 +26,8 @@ Question → retrieval and recommendation → existing bookings → slot collect
 | 請求驗證、SQL、錯誤處理 / Engineering standards | Pydantic、參數化 SQL、交易及明確錯誤回應。 / Validation, parameterized queries and transactional error handling. |
 | React 聊天與即時／可刷新預約 / React workbench | 繁英介面、重試、新對話、自動與手動列表更新。 / Bilingual chat, retry controls and appointment refresh. |
 
-本機單元／整合／元件測試及兩個模型的真實流程提供驗證證據；有限測例通過不保證每種自然語言都能正確處理。
-Local tests and live-provider acceptance substantiate these features within the recorded cases.
+本機單元／整合／元件測試、DeepSeek 本次真實複核及 Sonnet 10 月 22 日歷史對照提供驗證證據；有限測例通過不保證每種自然語言都能正確處理。
+Local tests, the current DeepSeek review and historical Sonnet acceptance substantiate these features within the recorded cases.
 
 ## 3. 加分項與排除範圍 / Optional features and exclusions
 
@@ -53,6 +53,8 @@ Local tests and live-provider acceptance substantiate these features within the 
 | 回信附倉庫連結 / Submission email | 已提供草稿；未代寄郵件。 / Draft provided; no email sent. |
 | 24 小時期限 / 24-hour deadline | 原始郵件收件時間未知，須自行核對。 / Receipt timestamp unavailable. |
 | 現場展示 / Live demonstration | 已有本機及 DeepSeek／Sonnet 驗收紀錄；現場前仍須確認服務及額度。 / Recorded acceptance does not guarantee future provider availability. |
+
+最新乾淨副本驗收與修正見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)。 / See the fresh-clone readiness review for current evidence.
 
 ## 5. 提交／面試前檢查 / Pre-demo checks
 

@@ -1,20 +1,23 @@
 # 測試與驗收 / Validation
 
-**功能驗收日期 / Recorded acceptance: 2026-10-22.**
-文件於 2026-10-23 整理；本次文件整理未重跑付費模型或產生新功能測試成績。
-Documentation was reorganized on October 23; the results below retain their original acceptance date.
+**最新提交複核 / Latest submission review: 2026-10-23.**
+本頁最新結果對應本次檢索及路由提示修正後的版本；乾淨安裝與瀏覽器證據見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)。2026-10-22 的兩模型比較另保留為歷史結果。
+Current results include the fixes found during the fresh-clone review; the earlier provider comparison remains dated separately.
 
 ## 1. 最新結果 / Latest recorded results
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合 / Backend unit and integration | 109 passed |
+| 後端單元／整合 / Backend unit and integration | 110 passed |
 | 前端單元／元件 / Frontend unit and component | 28 passed |
-| 自動化測試合計 / Automated test total | 137 passed |
+| 自動化測試合計 / Automated test total | 138 passed |
 | 後端行／分支合併覆蓋率 / Backend combined coverage | 98.01% |
 | 前端覆蓋率 / Frontend coverage | Lines/functions 100%; statements 99.23%; branches 93.83% |
 | React 正式建置 / Production build | Passed |
-| DeepSeek、Poe Sonnet 真實流程 / Live provider acceptance | 各 / each 82/82 checks |
+| DeepSeek 真實核心流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
+| DeepSeek 暫緩／撤回 / Hold and withdrawal | 27/27 checks, 2026-10-23 |
+| 常見問題 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations |
+| Poe Sonnet 歷史流程 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun |
 | 部署設定離線驗證 / Offline deployment validation | 2 Compose files, 5 Kubernetes resources |
 | Docker／Kubernetes 執行 / Container and cluster runtime | 未驗收 / Not verified |
 | 雲端 CI / Cloud CI | 無本版成功證據 / No successful run claimed for this implementation |
@@ -35,6 +38,7 @@ Documentation was reorganized on October 23; the results below retain their orig
 | 前端 / Frontend | [frontend/src/test](frontend/src/test) | 聊天、API、摘要、追蹤、刷新、輸入法及重試 / UI and API-client behavior |
 | 真實核心流程 / Live core flow | [live_acceptance.py](scripts/live_acceptance.py) | 真實供應商、REST／SQL、持久化與追蹤 / End-to-end provider acceptance |
 | 真實額外情境 / Live edge cases | [expanded_acceptance.py](scripts/expanded_acceptance.py) | 暫緩、撤回、歧義、引用與摘要 / Expanded behavioral cases |
+| 常見問法 / Common questions | [common_questions_acceptance.py](scripts/common_questions_acceptance.py) | 16 scenarios / 20 turns; inspect response content as well as assertions |
 
 單元／整合測試中的受控模型輸出驗證應用邏輯；真實模型測試另外驗證供應商與實際語言行為，兩者不可互相替代。
 Mocked contracts and live-provider evidence answer different questions.
@@ -66,10 +70,10 @@ Coverage gates are enforced by the existing test configuration; preserve the com
 
 ## 4. 真實流程與重現 / Live acceptance and reproduction
 
-最新兩模型對照包含 14 輪對話、2 則摘要及 1 次快取重試；核對問答、指代、意圖、缺欄位、中途問答、建立與更正、草稿取消、REST／SQL 紀錄、重啟與追蹤用量。
+本次 DeepSeek 核心複核包含 14 輪對話、2 則摘要及 1 次快取重試；核對問答、指代、意圖、缺欄位、中途問答、建立與更正、草稿取消、REST／SQL 紀錄、重啟與追蹤用量。
 The live suite checks conversational behavior and actual persisted results rather than generated success text alone.
 
-供應商設定、完整命令、量測及 run ID 統一維護於 [MODEL_COMPARISON](MODEL_COMPARISON.md)。執行會消耗 API 額度，報告及隔離 DB 留在本機 runtime；不發布原始對話或憑證。
+本次 run ID 與發現見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)；供應商設定、完整命令及先前比較維護於 [MODEL_COMPARISON](MODEL_COMPARISON.md)。執行會消耗 API 額度，報告及隔離 DB 留在本機 runtime；不發布原始對話或憑證。
 Use the comparison report as the reproducibility reference. Retain failed runs and investigate them rather than rerunning until success.
 
 ## 5. 歷史證據 / Historical evidence
@@ -85,6 +89,6 @@ Historical counts describe different revisions and suites, not extra current cov
 - 廣泛自然語言品質、臨床正確性、完整提示注入防護。 / Comprehensive language, clinical and security quality.
 - Docker／Kubernetes runtime、其他作業系統、多 worker、負載及完整 DST 歧義。 / Container runtime, cross-platform, distributed/load and DST behavior.
 - GPT-6 Astra High 沒有獨立 API 對跑，沒有其延遲、Token 或得分。 / The Codex-selected model was not independently benchmarked.
-- [先前 GitHub Actions run](https://github.com/gjtjx/KUDOS/actions/runs/39775522266) 因帳號帳單限制未執行；本次未重新驗證帳號狀態，也未宣稱雲端 CI 通過。 / An earlier run was blocked; current account eligibility has not been rechecked.
+- [先前 GitHub Actions run](https://github.com/gjtjx/KUDOS/actions/runs/39775522266) 因帳號帳單限制未執行；本次重新查詢仍只有該失敗 run，沒有最新提交成功紀錄；未查帳單狀態。 / An earlier run was blocked; the run listing still contains only that failed run; billing eligibility was not inspected.
 
 部署驗收程序見 [DEPLOYMENT](DEPLOYMENT.md)，失敗排查見 [MAINTENANCE](MAINTENANCE.md)。

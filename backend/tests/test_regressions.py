@@ -72,6 +72,18 @@ class RegressionTests(unittest.TestCase):
         if (ROOT/'frontend'/'dist').exists():
             self.assertIn('text/html',self.client.get('/').headers['content-type'])
 
+    def test_readme_symptom_query_excludes_auxiliary_word_matches(self):
+        before = self.client.get('/api/bookings').json()
+        result = self.chat('I have a skin rash. What service is available?').json()
+        self.assertEqual(result['intent'], 'knowledge')
+        self.assertEqual({s['id'] for s in result['sources']}, {'D103', 'T003'})
+        self.assertIn('Dermatology', result['reply'])
+        self.assertNotIn('Flu Shot', result['reply'])
+        self.assertEqual(self.client.get('/api/bookings').json(), before)
+        # Ignoring the auxiliary verb must not suppress an explicit flu request.
+        flu = self.chat('Do you have flu shots?', key='flu').json()
+        self.assertIn('T004', {s['id'] for s in flu['sources']})
+
     def test_database_rollback_and_foreign_keys(self):
         with self.assertRaises(RuntimeError):
             with self.db.connect() as c:

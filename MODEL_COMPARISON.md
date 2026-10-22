@@ -3,6 +3,9 @@
 **量測日期 / Measured: 2026-10-22.** 同一程式、資料與流程，DeepSeek 和 Poe Sonnet 最終均通過 82 項檢查。操作設定以 [README 模型設定](README.md#model-configuration) 為準。
 These are recorded acceptance results, not a current provider availability guarantee.
 
+最新 2026-10-23 提交複核另見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)：DeepSeek 修正後 82 項核心及 27 項暫緩／撤回檢查通過；Sonnet 本次未重跑。以下量測表仍為 10 月 22 日的同版對照，不以不同日期結果重新排名。
+The latest review is separate; the comparative measurements below retain their original date and revision.
+
 ## 1. 比較方法 / Method
 
 每組包含 14 輪對話、2 則摘要及 1 次快取重試，共 17 個應用請求。涵蓋就診導覽、推薦、指代、現有預約、多輪收集、中途問答、寫入／更正、草稿取消、重啟、摘要與追蹤。

@@ -1,6 +1,6 @@
 # 面試講解與問答 / Interview Walkthrough and Q&A
 
-程式依據：功能提交 0d0ec8e；文件整理：2026-10-23；測試數據日期：2026-10-22。
+程式依據：本文件所在提交；最新驗收：2026-10-23；Sonnet 比較數據為 2026-10-22 歷史結果。
 閱讀方式：先熟悉第 1、2、5 節，再用第 9 節模擬追問。啟動與模型參數以 [README](README.md) 為準，測試數據以 [VALIDATION](VALIDATION.md) 為準。本文描述實際程式，向量檢索與正式環境改造另列為未來方案。
 
 ---
@@ -13,7 +13,7 @@
 >
 > 知識問答採用模型改寫查詢、ID 關聯查詢與 FTS5／BM25 檢索，回答附上來源。工程上加入兩層請求防重複、錯誤處理、逐字稿引文驗證和持久化模型追蹤。
 >
-> 目前有 109 項後端和 28 項前端測試通過，DeepSeek 與 Sonnet 在同一組完整流程各通過 82 項檢查。這是單一病人的作業原型；我能清楚區分已驗證能力和正式上線仍需補強的部分。
+> 目前有 110 項後端和 28 項前端測試通過，DeepSeek 本次完整流程通過 82 項檢查，另有 27 項暫緩／撤回檢查；Sonnet 的 82 項為前一天的歷史結果。這是單一病人的作業原型；我能清楚區分已驗證能力和正式上線仍需補強的部分。
 
 **一句英文概述：**
 
@@ -282,7 +282,7 @@ REST 工具透過 HTTPX ASGITransport 呼叫同一個 FastAPI 應用。這會走
 
 ### 7.3 如何引用驗收結果
 
-完整結果以 [VALIDATION](VALIDATION.md) 為準；兩模型數據與方法見 [MODEL_COMPARISON](MODEL_COMPARISON.md)。面試可概述「137 項自動化測試通過、兩模型各 82 項檢查通過」，同時交代驗收日期和有限樣本邊界。
+完整結果以 [VALIDATION](VALIDATION.md) 為準；兩模型數據與方法見 [MODEL_COMPARISON](MODEL_COMPARISON.md)。面試可概述「138 項自動化測試通過、DeepSeek 本次 82 項核心檢查通過，Sonnet 有 82 項歷史驗收」，同時交代驗收日期和有限樣本邊界。
 
 82 是斷言數，不是 82 個獨立臨床案例。耗時不是普遍性能排名；供應商、API、分詞器及推理行為不同，Token 不代表可直接比較的費用。Docker／Kubernetes 僅離線設定驗證，雲端 CI 沒有本版成功證據。
 
@@ -385,7 +385,7 @@ knowledge 和 visit_flow 分支不清除草稿；下一輪仍提供草稿和歷�
 會驗證欄位和引文來源，缺失資訊保持 null；但引文存在不保證推論、否定詞或醫療語義正確。它是輔助整理，不是診斷系統，仍需人工核對。
 
 ### Q19：DeepSeek 比 Sonnet 好嗎？
-本次兩者均通過 82 項；DeepSeek 這輪平均耗時較短。但只有一組有限樣本，API、供應商和 tokenizer 也不同，不能據此給出通用品質或成本排名。
+10 月 22 日對照中兩者均通過 82 項；當時 DeepSeek 平均耗時較短。10 月 23 日的新修正僅對 DeepSeek 重跑，不把 Sonnet 舊數據當成新版本實測。但只有一組有限樣本，API、供應商和 tokenizer 也不同，不能據此給出通用品質或成本排名。
 
 ### Q20：之前 502 的根因是甚麼？
 可確認的問題有設定混用和 DeepSeek thinking mode 不接受 forced tool choice；已修正載入優先序及供應商相容預設。歷史上部分 generic ValueError 沒有足夠細節，不能把它們全歸因於同一欄位；新增了有上限的路由格式恢復及測試。
@@ -437,6 +437,7 @@ knowledge 和 visit_flow 分支不清除草稿；下一輪仍提供草稿和歷�
 
 ## 11. 對照文件
 
+- [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)：最新複核與實際發現
 - [README.md](README.md)：啟動與介面
 - [VALIDATION.md](VALIDATION.md)：統一測試結果與驗證範圍
 - [TECH_DOC.md](TECH_DOC.md)：技術設計

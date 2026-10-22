@@ -5,7 +5,7 @@
 - **Repository:** [gjtjx/KUDOS](https://github.com/gjtjx/KUDOS)
 - **Stack:** React, Vite, FastAPI, Python and SQLite
 - **Documentation reviewed:** October 23, 2026
-- **Recorded functional acceptance:** October 22, 2026
+- **Latest functional acceptance:** October 23, 2026
 
 ## 1. Project overview
 
@@ -72,9 +72,9 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The October 22 acceptance recorded **109 backend tests and 28 frontend tests passing**, with a successful production frontend build. DeepSeek Flash and Poe Sonnet 5.5 each passed **82 checks** across the same live workflow.
+The October 23 fresh-clone review recorded **110 backend tests and 28 frontend tests passing**, with a successful production build. DeepSeek passed **82 core checks** and **27 hold/withdrawal checks** after fixes. Poe Sonnet's **82-check result is historical, from October 22**, and was not rerun in this review. See [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) for findings and browser evidence.
 
-These checks cover fourteen chat turns, two transcript summaries, persistence, restart, deduplication, corrections and trace accounting. They are not 82 independent clinical cases or a general model benchmark. Earlier failures were retained and informed regression fixes.
+These checks cover fourteen chat turns, two transcript summaries, persistence, restart, deduplication, corrections and trace accounting. They are not 82 independent clinical cases or a general model benchmark. Earlier failures were retained and informed regression fixes, including an auxiliary-word retrieval match and over-cautious interpretation of selecting booking details.
 
 [Test coverage and limits](VALIDATION.md) and [provider comparison and reproduction](MODEL_COMPARISON.md) contain the detailed results. No successful cloud CI or container/cluster runtime acceptance is claimed.
 

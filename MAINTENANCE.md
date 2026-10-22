@@ -84,6 +84,7 @@ Service guidance must preserve missing information and conditional instructions.
 | 模型或模式不符 / Wrong mode/model | 查健康端點；核對程序環境是否覆寫 .env，確認啟動目錄及重啟。 / Check process overrides and launch directory. |
 | 無關回答或錯意圖 / Wrong answer/intent | 保存原句、mode、intent、來源 ID，在隔離 DB 重現。LLM 查 route_intent／檢索；local 查規則／模板。 / Debug the active mode's actual path. |
 | 畫面舊版 / Stale UI | 重建 frontend、重啟並刷新。 / Rebuild and reload. |
+| Windows 測試依賴安裝出現路徑不存在 / Long-path installation failure | 在短路徑重新 clone 並重建 .venv；Kubernetes schema 套件可能超過 Windows 路徑限制。 / Recreate the checkout and environment at a short path. |
 | 埠被佔用 / Port conflict | 確認自己的舊服務或改埠，勿任意終止不明程序。 / Resolve only the intended server instance. |
 | 422 | 檢查欄位、醫生服務相容性、成人限制及診所當地未來時間。 / Check validation and business rules. |
 | 409 | 同 ID 配不同內容；重試保留原內容，新操作用新 ID。 / Preserve retry identity. |
