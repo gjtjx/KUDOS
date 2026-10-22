@@ -4,6 +4,8 @@
 本頁最新結果對應授權引文、後端狀態回答與顯示正規化修正；[修復驗證](FIX_VALIDATION.md)記錄 118 項後端測試、112 項定向與 82 項完整流程結果；乾淨安裝與瀏覽器證據見 [SUBMISSION_CHECK](SUBMISSION_CHECK.md)。2026-10-22 的兩模型比較另保留為歷史結果。
 Current results include the fixes found during the fresh-clone review; the earlier provider comparison remains dated separately.
 
+最新完整 64 場景複測 / Latest full retest: [FULL_REGRESSION_REPORT.md](FULL_REGRESSION_REPORT.md), tested `8e2e2d0`. All 376 original checks passed; response/state review found open issues. Unit/frontend results below retain their earlier scope; those suites were not rerun during this report-only retest.
+
 ## 1. 最新結果 / Latest recorded results
 
 | 驗證 / Validation | 結果 / Result |
@@ -16,6 +18,7 @@ Current results include the fixes found during the fresh-clone review; the earli
 | React 正式建置 / Production build | Passed |
 | DeepSeek 真實核心流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
 | DeepSeek 修復回歸 / Fix regressions | 112/112 checks, 11 scenarios / 20 turns |
+| 修復後完整複測 / Full post-fix retest | 64 scenarios / 83 turns; 376/376 original checks; open response/state findings |
 | 常見問題 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations |
 | Poe Sonnet 歷史流程 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun |
 | 部署設定離線驗證 / Offline deployment validation | 2 Compose files, 5 Kubernetes resources |

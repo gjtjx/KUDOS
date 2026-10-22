@@ -184,10 +184,10 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 <a id="testing"></a>
 ## 測試與驗證 / Testing
 
-**2026-10-23 提交前複核通過。** 從公開 GitHub 乾淨副本完成安裝、建置、隔離啟動與瀏覽器演示，詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
-**Submission review passed on October 23, 2026**, using a fresh public clone and isolated runtime.
+**2026-10-23 完整回歸已完成，仍有對話品質發現待改善。** 從公開 GitHub 乾淨副本完成安裝、建置、隔離啟動與瀏覽器演示，詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
+**Submission review completed on October 23, 2026**, using a fresh public clone and isolated runtime; see the later full retest for open findings.
 
-**後續問題已修復並定向驗證：**英文預約、查詢矛盾、MRI 證據範圍與顯示格式的修復通過 112 項針對性檢查及 82 項完整流程檢查；未重跑全部 64 場景。 / See [FIX_VALIDATION.md](FIX_VALIDATION.md) for the fixes, targeted retest and remaining boundaries.
+**完整 64 場景已重新執行：**83 輪對話、376/376 項原有檢查通過；英文預約與查詢矛盾未復發，但謝語誤開草稿、語言過度斷言、雙語不完整等問題仍需改善。 / [Full retest](FULL_REGRESSION_REPORT.md): mechanical checks pass, while conversational/state review retains open findings; this is not a clean no-regression claim. Earlier fixes and focused checks are retained in [FIX_VALIDATION.md](FIX_VALIDATION.md).
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
@@ -198,7 +198,8 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 | DeepSeek 修復定向驗證 / Targeted fix regression | 112/112 checks, 11 scenarios / 20 turns, 2026-10-23 |
 | 常見問法 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations in the review report |
 | 修復說明 / Fix validation | [Changes and retest](FIX_VALIDATION.md) |
-| 擴大情境 / Diverse scenarios | [64 scenarios / 83 turns](DIVERSE_QUESTIONS_REPORT.md); mechanical results and open response-quality findings are reported separately |
+| 完整修復後複測 / Full retest | [64 scenarios / 83 turns](FULL_REGRESSION_REPORT.md); 376/376 mechanical checks, open response/state findings |
+| 修復前歷史 / Pre-fix history | [Original failures](DIVERSE_QUESTIONS_REPORT.md) retained |
 | Poe Sonnet 歷史對照 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun in this review |
 
 本次發現並修正本機詞彙檢索噪聲及模型對「確認醫生／服務」的過度暫緩；中間失敗報告保留。這是有限案例驗收，不是通用模型排名。雲端 CI 與容器／叢集執行仍未驗收。

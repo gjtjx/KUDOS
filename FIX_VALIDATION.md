@@ -30,7 +30,7 @@ Repeated probes: `0f674378ab134801aa54825c91ceda1a`, `6b1b9826cead4fe584c892a6f7
 
 Targeted scenarios: c14, c23, c31, c38, c50, c51, c52, c61, c62, c63, c64. The English request created the intended James Wilson / joint-consultation booking at 14:30. The timezone case wrote the correct Los Angeles record and the next query included it without a denial. Explicit hold/edit/confirm cases passed without premature writes. MRI, preparation and credential-refusal text was manually reviewed for source scope, format and original doctor names.
 
-The entire 64-scenario suite was **not** rerun after the fix. Its earlier 83-turn / 374-check outcome remains historical. These tests support the corrected cases and full demonstration path, not a universal language-quality guarantee. Cloud CI, Docker execution and Kubernetes runtime remain unverified.
+The entire 64-scenario suite was subsequently rerun on `8e2e2d0`: **376/376 original checks passed**, 83 turns and all 8 expected writes. Response/state review still found open issues; see [FULL_REGRESSION_REPORT.md](FULL_REGRESSION_REPORT.md). The earlier 83-turn / 374-check outcome remains historical. Focused passes are not a universal language-quality guarantee. Cloud CI, Docker execution and Kubernetes runtime remain unverified.
 
 ## 重現 / Reproduce
 
