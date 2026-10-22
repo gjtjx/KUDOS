@@ -44,6 +44,8 @@ The restricted execution environment initially prevented SQLite/HTTP integration
 
 ## Not yet verified
 
+GitHub Actions run #1 was blocked before any test steps started. GitHub reported: "The job was not started because your account is locked due to a billing issue." See https://github.com/gjtjx/KUDOS/actions/runs/39775522266. The repository owner must resolve the account issue before rerunning CI; local acceptance results above remain valid.
+
 - Live remote LLM/provider calls (no API key or model supplied). Tests use mocked model responses, explicitly distinct from a live model check.
 - Docker image/runtime, macOS/Linux startup and clinical correctness.
 - Multi-worker deployment, load testing, daylight-saving ambiguous-time edge cases and production authentication.
