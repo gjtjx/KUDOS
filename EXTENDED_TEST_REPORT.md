@@ -1,8 +1,12 @@
-# 額外測試與修復報告 / Extended Test and Fix Report
+# 歷史：額外情境與修復 / Historical Edge Cases and Fixes
+
+> 歷史報告：本頁保存 2026-10-22 較早版本的 78／167 項情境、108 項自動化測試及修復歷程。這些不是目前總數，也不與最新結果相加。現況見 [VALIDATION](VALIDATION.md)，供應商對照見 [MODEL_COMPARISON](MODEL_COMPARISON.md)。
+>
+> Historical suite counts and failures are retained for traceability; current acceptance is maintained separately.
 
 日期 / Date: 2026-10-22。真實供應商模型 / Live model: Poe `claude-sonnet-5.5`, Chat Completions + auto tool choice.
 
-## 結論 / Result
+## 當時結果 / Results at that revision
 
 原始核心流程 78 項檢查、新增情境 167 項檢查全部通過。另一次生成文字格式重測 4 項通過。後端 86 項、前端 22 項自動化測試通過，共 108 項；後端行與分支合併覆蓋率 97.50%，React 正式建置成功。
 
@@ -57,7 +61,7 @@ The first run had 155 assertions, with three write-count failures corresponding 
 
 Additional scenarios comprise 28 chat turns and five summaries in two groups. Semantic points were reviewed in this conversation. Automated assertions cover HTTP responses, writes, original records, fields, replay/conflicts, missing summary fields and quotes; this is not independent model grading.
 
-## 新增固定回歸 / Deterministic regressions
+## 當時新增的固定回歸 / Regressions added at that revision
 
 test_extended.py 新增 15 項測試：完整草稿暫緩、普通 submit 不解除暫緩、collect 不寫入、撤回日期、替換選擇、無效／缺失權限、非法清除欄位、跨問答與重啟保留暫緩、取消草稿解除暫緩、12 個併發相同請求只建一筆、併發衝突鍵僅一個成功、API 非法輸入、閏日與 Unicode 備註，以及本機模式暫緩／撤回。
 
@@ -65,10 +69,7 @@ Fifteen added tests cover consent/state transitions, restart persistence, valida
 
 ## 重現與原始證據 / Reproduction and evidence
 
-```powershell
-python scripts/expanded_acceptance.py --env-file .env --summary
-python scripts/live_acceptance.py --env-file .env --model claude-sonnet-5.5 --summary
-```
+重跑指令集中於 [MODEL_COMPARISON](MODEL_COMPARISON.md)，請使用完整、匹配的供應商設定。 / Current reproduction commands are maintained in the comparison guide.
 
 會消耗真實 API 額度；不修改 runtime/clinic.db。密鑰僅讀自本機設定，報告與提交內容不包含密鑰。 / Uses real API quota and isolated databases. Credentials remain local.
 
@@ -89,6 +90,6 @@ python scripts/live_acceptance.py --env-file .env --model claude-sonnet-5.5 --su
 
 ## 範圍限制 / Limits
 
-未以本次測試宣稱所有自然語言皆可靠；仍可能有措辭、引用格式或語義誤差。摘要的逐字引用檢查不等同臨床正確性驗證。跨時區僅驗證上述明確範例，未涵蓋所有夏令時間歧義。並發測試驗證單程序 REST/SQLite 防重複，並非多 worker 或壓力測試。Docker、雲端 CI 的未驗證狀態維持不變。
+未以本次測試宣稱所有自然語言皆可靠；仍可能有措辭、引用格式或語義誤差。摘要的逐字引用檢查不等同臨床正確性驗證。跨時區僅驗證上述明確範例，未涵蓋所有夏令時間歧義。並發測試驗證單程序 REST/SQLite 防重複，並非多 worker 或壓力測試。Docker／Kubernetes 及雲端 CI 的最新驗證範圍見 [VALIDATION](VALIDATION.md)。
 
-Finite cases do not establish universal language reliability or clinical correctness. The timezone example is not exhaustive DST testing; concurrency checks cover single-process REST/SQLite idempotency, not distributed/load behavior. Docker and cloud CI remain unverified as previously documented.
+Finite cases do not establish universal language reliability or clinical correctness. The timezone example is not exhaustive DST testing; concurrency checks cover single-process REST/SQLite idempotency, not distributed/load behavior. See the current validation report for deployment and CI status.

@@ -1,12 +1,16 @@
-# Claude 實測與 Codex 審核 / Live Claude Test and Codex Review
+# 歷史：Claude 實測與審核 / Historical Claude Acceptance
+
+> 歷史報告：2026-10-22 的早期 Claude 驗收。保留當時結果、失敗及修復背景；不是目前設定指南或最新測試總數。最新兩模型結果與命令見 [MODEL_COMPARISON](MODEL_COMPARISON.md)，目前整體驗證見 [VALIDATION](VALIDATION.md)。
+>
+> Historical evidence from an earlier revision. Counts and measurements below describe that run only; use the linked current documents for setup and acceptance status.
 
 日期 / Date: 2026-10-22。模型 / Model: `claude-sonnet-5.5`，供應商 / Provider: Poe，介面 / API: Chat Completions。
 
-相容性結論：此模型可用；不支援的是本次測到的 Responses 呼叫方式。實際使用 Chat Completions + auto 工具選擇。後續邊界測試與修正見 [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / The model works through Chat Completions with auto tool choice; the rejected interface was Responses. See the extended report for subsequent findings and fixes.
+當時相容性結論：此模型可用；不支援的是本次測到的 Responses 呼叫方式。實際使用 Chat Completions + auto 工具選擇。後續邊界測試與修正見 [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / The tested model worked through Chat Completions with auto tool choice; the rejected interface was Responses. See the extended report for subsequent findings and fixes.
 
 ## 比較邊界 / Comparison boundary
 
-你所指的「GPT-6 Astra High」是 Codex 對話中的模型選擇，沒有對應的專案 API 憑證。本次不能提供它的獨立 API 結果、延遲、token 或費用，也不能據此判定兩個模型誰更強。本文件比較的是 Claude 的真實執行結果與本對話的審核標準；不是兩模型同條件 benchmark。
+當時提及的「GPT-6 Astra High」是 Codex 對話中的模型選擇，沒有對應的專案 API 憑證。本次不能提供它的獨立 API 結果、延遲、token 或費用，也不能據此判定兩個模型誰更強。本文件比較的是 Claude 的真實執行結果與本對話的審核標準；不是兩模型同條件 benchmark。
 
 “GPT-6 Astra High” refers to the model selected in the Codex conversation, with no corresponding project API credentials. Its independent API results, latency, tokens and cost were not measured. This report compares live Claude behavior against the review performed in this conversation, not a controlled two-model benchmark.
 
@@ -17,7 +21,7 @@
 - Chat Completions 的強制工具選擇：Poe 回傳 upstream gateway failure。經實測，`tool_choice=auto` 並移除 provider strict 參數可回傳真實 function call。 / Forced tool selection failed; auto tool choice without provider strict mode returned valid function calls.
 - 應用程式仍檢查工具名稱、數量、欄位型別及預約業務規則。若模型只回文字、工具不正確或輸出不完整，會回錯誤，不轉回本機規則假裝成功。 / Application validation remains mandatory; invalid calls fail explicitly without a local fallback.
 
-協定參考 / Protocol references: [Poe Responses](https://creator.poe.com/api-reference/createResponse), [Poe tool calling](https://creator.poe.com/docs/external-applications/tool-calling), [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling). 實際可用性以本次連線結果為準。 / Actual compatibility was established by live requests.
+相容性紀錄是當時實測觀察，不代表供應商永久支援狀態。 / Compatibility statements describe observed requests, not permanent provider capabilities.
 
 ## 相同需求下的結果與審核 / Results and review against requirements
 
@@ -44,13 +48,9 @@ Full run (followed by targeted evidence-repair and draft-prompt retests): 14 cha
 
 這是小型功能驗收，不是統計性的模型品質評測；未計算貨幣成本，Poe 點數、重試及前置相容性測試也未包含在上述單輪用量。 / This is a small functional acceptance run, not a statistical benchmark. Monetary cost was not calculated; compatibility probes and other runs are excluded from these totals.
 
-重跑指令（會使用真實 API 額度） / Rerun (uses paid API quota):
+目前重跑方式統一見 [MODEL_COMPARISON](MODEL_COMPARISON.md)；已移除會混用目前 DeepSeek 設定的舊 Sonnet 命令。 / Use the current comparison guide; the obsolete mixed-profile command has been removed.
 
-```powershell
-python scripts/live_acceptance.py --env-file .env --model claude-sonnet-5.5 --summary
-```
-
-報告與隔離資料庫輸出至 `runtime/live-acceptance/<run-id>/`，不覆蓋使用者資料庫。可另查 [VALIDATION.md](VALIDATION.md) 的單元測試與瀏覽器驗收。 / Reports and isolated databases are written under runtime; see validation for unit and browser checks.
+報告與隔離資料庫輸出至 `runtime/live-acceptance/<run-id>/`，不覆蓋使用者資料庫。目前整體測試請另查 [VALIDATION.md](VALIDATION.md)。 / Reports and isolated databases are written under runtime; see validation for unit and browser checks.
 
 ## 已知限制 / Known limits
 

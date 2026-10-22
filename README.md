@@ -189,32 +189,7 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 
 Live acceptance uses the same application and fixtures across 14 chat turns and two summaries, including persistence, retry deduplication and tracing. It is a bounded acceptance suite, not a general model benchmark. Cloud CI and container/cluster runtime remain unverified.
 
-<details>
-<summary>重跑本機測試 / Run local tests</summary>
-
-在專案根目錄執行 / Run from the project root:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
-$env:PYTHONPATH="backend"
-$env:AI_MODE="local"
-.\.venv\Scripts\python.exe -m coverage run -m unittest discover -s backend/tests -v
-.\.venv\Scripts\python.exe -m coverage report
-cd frontend
-npm.cmd ci
-npm.cmd run test:coverage
-npm.cmd run build
-cd ..
-Remove-Item Env:AI_MODE
-```
-
-測試使用獨立暫存 SQLite，不寫入示範資料庫。末行移除本次測試的模式覆寫，讓後續啟動可讀取 `.env`；若原有程序環境設定，請恢復原值。
-
-Tests use isolated SQLite files rather than the demo database. The final command removes the test-only mode override so later starts can read `.env`; restore any previous process setting if applicable.
-
-真實模型測試需要密鑰並消耗 API 額度；執行方式見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。完整測試證據與限制見 [VALIDATION.md](VALIDATION.md)。 / Live tests require credentials and consume API credits; see the linked reports for commands and evidence.
-
-</details>
+重跑命令、覆蓋率門檻與功能對照見 [VALIDATION.md](VALIDATION.md)；需要真實供應商的測試見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)，會消耗 API 額度。 / Test commands and coverage gates are maintained in the validation guide; live-provider tests are opt-in and consume API credits.
 
 <a id="deployment-and-scope"></a>
 ## 部署與限制 / Deployment and scope
@@ -225,7 +200,7 @@ Docker Compose and Kubernetes manifests include persistent storage, probes, non-
 
 - **使用範圍 / Access:** 固定模擬病人 P001，沒有登入或多人權限；維持本機存取。 / One predefined mock patient, no authentication or multi-user access control; intended for local use.
 - **預約範圍 / Booking:** 依作業假設時段可用；不含衝突檢查、既有預約取消或改期。 / Timeslots are assumed available; conflict checking and cancellation/rescheduling of saved bookings are outside scope.
-- **檢索與摘要 / Retrieval and summary:** FTS5/BM25，尚無向量檢索；摘要接收最多 16,000 字元的文字，不含錄音轉文字。 / Lexical retrieval only; summaries accept text up to 16,000 characters, with no audio transcription.
+- **檢索與摘要 / Retrieval and summary:** FTS5/BM25，尚無向量檢索；摘要接收最多 16,000 字元的文字，只在 LLM 模式啟用，不含錄音轉文字。 / Lexical retrieval only; summaries require LLM mode and accept text up to 16,000 characters, with no audio transcription.
 - **資料與隱私 / Data:** LLM 模式將必要模擬病人、對話、目錄或逐字稿送往供應商。逐字稿不寫入應用資料庫；對話狀態會保存。追蹤表只存中繼資料。 / Necessary context is sent to the provider. Transcripts are not stored in the app database; conversations are persisted, while trace tables contain metadata only.
 - **擴展與維護 / Operations:** 單 worker、單副本 SQLite；未驗證水平擴展。CSV 採缺失記錄新增，並非資料遷移系統。 / Single-worker, single-replica SQLite; no validated horizontal scaling. CSV seeding inserts missing records rather than migrating existing ones.
 - **醫療邊界 / Clinical scope:** 提供服務導覽與資料摘要，不是診斷或處方系統；原文引句檢查不等於臨床驗證。 / Service navigation and summarization, not diagnosis or prescribing; evidence checks are not clinical validation.
@@ -284,5 +259,12 @@ compose.llm.yaml       LLM deployment override
 | [MAINTENANCE.md](MAINTENANCE.md) | 維護、備份、還原及排錯。 / Maintenance, backup, restore and troubleshooting. |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Docker／Kubernetes 設定與操作。 / Container and Kubernetes setup. |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | 追蹤欄位、保留策略與隱私範圍。 / Trace fields, retention and privacy scope. |
-| [LIVE_MODEL_REPORT.md](LIVE_MODEL_REPORT.md) | 早期 Claude 實測與相容性記錄。 / Earlier Claude acceptance and compatibility findings. |
-| [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md) | 額外邊界案例、問題與修復證據。 / Additional edge cases and regression evidence. |
+| [LIVE_MODEL_REPORT.md](LIVE_MODEL_REPORT.md) | 歷史 Claude 實測與相容性記錄。 / Historical Claude acceptance and compatibility findings. |
+| [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md) | 歷史邊界案例、問題與修復證據。 / Historical edge cases and regression evidence. |
+
+目前操作指南與歷史驗收報告已分開標示；歷史數量不與最新結果相加。 / Current guides and historical reports are labelled separately; their counts are not cumulative.
+
+其他閱讀 / Additional reading:
+
+- [SUBMISSION_REPORT_EN.md](SUBMISSION_REPORT_EN.md)：精簡英文提交摘要。 / Concise English submission overview.
+- [INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md)：面試講解、程式節錄與問答。 / Interview walkthrough, code excerpts and Q&A.

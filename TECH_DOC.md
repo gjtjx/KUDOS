@@ -1,131 +1,132 @@
-> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+# 技術設計 / Technical Design
 
-# ClinicPilot AI — Technical Design
+本文說明實際架構、狀態與交易邊界。啟動及供應商設定見 [README](README.md#model-configuration)，實測數據見 [VALIDATION](VALIDATION.md)。
+This document describes the implemented design. Setup, provider profiles and acceptance evidence are maintained in the linked guides.
 
-## 1. Requirements and implementation
+## 1. 架構與責任 / Architecture and responsibilities
 
-| Requirement | Implementation | Evidence |
-|---|---|---|
-| Index clinics/doctors/treatments | SQLite FTS5 index; BM25 ranking; bilingual expansion | knowledge.py; retrieval test |
-| Multi-turn intent analysis | Local rules or LLM strict function call; persisted draft/history | agent.py; multi-turn and interleaving tests |
-| Personalized context | P001 profile, allergies, visit history and live bookings | profile API and REST tool context |
-| Existing booking queries via API/tool | HTTPX GET /api/bookings through ASGI transport | tool trace; query test |
-| Automated booking via API/tool | HTTPX POST /api/bookings when four fields are complete | booking test and persisted row |
-| Seed six CSV files | Relational schema with foreign keys; insert-if-missing seed | idempotent seed test |
-| Request validation and errors | Pydantic, parameterized SQL, typed HTTP errors | validation/error tests |
-| React chat and bookings | Chat composer, sources, draft, retry and auto-refresh | production build and browser acceptance |
-| Local setup and technical docs | README, this document, Windows launchers | source deliverable |
+ClinicPilot 是模組化單一服務：React 前端、FastAPI API、自訂 Python Agent 與 SQLite。作業允許 REST 或 MCP，本專案選擇 REST；沒有額外 Agent 框架或 MCP server。
+ClinicPilot is a modular single service, using custom orchestration and REST tools rather than a separate AI service or MCP server.
 
-## 2. Architecture
-
-```text
-React workbench
-    │ POST /api/chat {session_id, request_id, message}
-    ▼
-FastAPI → conversation orchestrator
-    ├── patient context + GET /api/bookings REST tool
-    ├── local router OR LLM route_intent function call
-    ├── knowledge intent → FTS5 retrieval → grounded answer
-    ├── booking query → joined, patient-scoped booking results
-    └── new booking → collect slots → POST /api/bookings REST tool
-                                      │
-                                      ▼
-                              validated SQLite transaction
-    ◀── factual result + intent + sources + tool trace + draft
-React → GET /api/bookings → refreshed list
+```mermaid
+flowchart TD
+    UI[React] --> API[FastAPI chat endpoint]
+    API --> Cache[Successful-request cache and session state]
+    Cache --> Agent[Agent orchestration]
+    Agent --> Router[Local rules OR LLM routing]
+    Router --> Retrieval[Exact IDs OR FTS5 / BM25]
+    Retrieval --> Answer[Grounded answer]
+    Router --> Draft[Draft, missing fields and submission gate]
+    Draft --> REST[Booking REST handlers]
+    REST --> DB[(SQLite transaction)]
+    Answer --> Save[Persist successful chat and state]
+    DB --> Save
+    Save --> UI
 ```
 
-AI modules live under backend/app rather than a separate network service. The assignment permits a custom Python agent; a single deployable process simplifies a live demonstration without removing module boundaries.
+每輪 Agent 先經 `GET /api/bookings` 讀取即時預約，另載入 P001 資料與小型目錄。工具使用 HTTPX ASGITransport 呼叫同一 FastAPI 應用，經正式路由、Pydantic 與交易；不是跨服務網路請求，也不是直接繞過 API 寫資料庫。
+Each turn reads current bookings through REST. ASGITransport dispatches through the actual API handlers within the process.
 
-HTTPX ASGITransport dispatches real HTTP request/response objects through the exact FastAPI route handlers, Pydantic validation and error handling. It does not call a repository insert function directly. No loopback socket or hardcoded self-host URL is needed; the booking endpoints are also externally callable as standard REST endpoints.
+| 模組 / Module | 責任 / Responsibility |
+|---|---|
+| [main.py](backend/app/main.py) | API、錯誤處理、交易與前端服務 / API, errors, transactions, static serving |
+| [agent.py](backend/app/agent.py) | 路由、上下文、草稿與工具編排 / Routing, context, drafts, tools |
+| [knowledge.py](backend/app/knowledge.py) | ID 關聯查詢、FTS5/BM25 / Catalog retrieval |
+| [llm.py](backend/app/llm.py) | Responses / Chat Completions、相容設定及安全錯誤 / Provider adapter |
+| [db.py](backend/app/db.py)、[models.py](backend/app/models.py) | 持久化、初始化及輸入驗證 / Persistence, seed, input validation |
+| [answers.py](backend/app/answers.py)、[localization.py](backend/app/localization.py) | 本機回答與雙語顯示 / Local answers and localization |
+| [transcripts.py](backend/app/transcripts.py) | 摘要與引文驗證 / Summary and evidence checks |
+| [observability.py](backend/app/observability.py) | 請求與模型追蹤 / Request and generation traces |
+| [frontend/src](frontend/src) | 聊天、預約、摘要、追蹤與重試 / React workbench |
 
-## 3. Intent and state workflow
+## 2. 路由與對話狀態 / Intent and conversation state
 
-State is keyed by opaque browser session ID, always bound to P001. Each state contains an active flag, a four-slot draft with a booking idempotency key, and a capped twenty-message history.
+`local` 是獨立示範模式，以規則與模板運行；`llm` 每則新訊息使用模型路由，失敗不自動降級成本機回答。
+Local mode is an explicit deterministic demo, not an automatic fallback for provider failures.
 
-- visit_flow: provide general visit orientation, enriched with the next booking and catalog address/preparation. Missing on-site policies are explicitly unknown; no booking is created and drafts are preserved. In local mode this is deterministic; in LLM mode intent and wording both use the model, with host-provided factual context.
-- knowledge: retrieve evidence and answer; leave any active draft intact.
-- bookings: read latest records via REST, return next future Confirmed booking plus history.
-- book: merge explicitly extracted parameters. Ask for missing doctor, treatment, date and time. Once complete, execute the booking API.
-- cancel_draft: clear only the pending draft; do not mutate confirmed appointments.
+| 意圖 / Intent | 行為 / Behavior |
+|---|---|
+| `knowledge` | 檢索並回答，包括特定服務準備事項；保留草稿 / Retrieve and answer without clearing the draft |
+| `visit_flow` | 一般就診導覽；未提供的院內規定標為未知 / General visit guidance with explicit information gaps |
+| `bookings` | 使用 REST 取得的即時預約 / Answer from current booking records |
+| `book` | 合併選擇、追問缺失欄位或提交 / Merge, clarify or execute |
+| `cancel_draft` | 清除未提交草稿；不修改已確認預約 / Discard only the pending draft |
 
-All parameters remain validated independently of model output. Unknown IDs, inappropriate doctor/service combinations, dates in the past and invalid time formats are rejected. A rejected draft remains editable and is never described as saved.
+Session 綁定 P001，保存 `active`、`draft`、`booking_hold` 和最多 20 則歷史訊息；模型使用最近 12 則歷史訊息。這是訊息數，不是問答輪數；結構化草稿可保留更早的選擇。
+Sessions retain bounded history and structured booking state, not unlimited conversational memory.
 
-The route tool separates intent/slots from booking_action (collect, hold, submit, confirm), plus clear_slots for explicitly withdrawn selections. The host persists booking_hold with the session. A normal submit cannot override a hold; only an explicit confirm releases it. Clearing fields occurs before merging new values and checking completeness. Missing or invalid LLM booking permission fails without writing. Local demo routing uses the same host gate with limited phrase matching.
+`route_intent` 輸出意圖、`search_query`、四欄位、`clear_slots` 與 `booking_action`。主機依序處理：
+The host processes the routing result in this order:
 
-路由新增提交意願與撤回欄位，後端獨立檢查是否可提交；暫緩狀態會跨提問與重啟保留，直到使用者明確確認。此設計修正「資料完整但使用者尚未同意」及「撤回日期後仍沿用舊值」兩個實測問題。
+1. 清除明確撤回的欄位；null／未提及不刪舊值。 / Clear explicitly withdrawn fields; absent/null values preserve selections.
+2. 合併新的醫生、服務、日期與時間。 / Merge new slot values.
+3. 保存 hold；只有 confirm 解除暫緩。 / Persist a hold until explicit confirmation.
+4. 缺欄位或無提交許可時不寫入；只有完整且獲授權的草稿進入 API。 / Execute only a complete, authorized draft.
+5. 成功或取消草稿後清理待辦狀態。 / Clear pending state on success or draft cancellation.
 
-Local mode is a deterministic fallback for an interview without credentials. LLM mode uses a strict JSON function schema for routing/extraction; the host retains control of side effects. Booking confirmation comes from the API result, not a model-generated claim.
+主機檢查工具回傳與允許的欄位／動作。路由結構錯誤最多修復一次，發生在預約副作用之前；供應商或憑證錯誤不走此修復。Provider 的 `strict=false` 不會停用應用驗證，也不能保證模型語義正確。
+Invalid routing structure allows one bounded retry before side effects. Host validation remains active regardless of provider strict-mode support.
 
-## 4. RAG decisions
+## 3. RAG 與資料依據 / Retrieval and grounding
 
-Each clinic, doctor and treatment row is one indexed document with source filename and primary ID. Query terms are safely quoted for FTS5 MATCH and bound as SQL parameters. English stopwords are removed; common Chinese and symptom terms expand to catalog specialties. BM25 ranks a maximum of six results.
+- 診所、醫生、療程每列建立一份知識文件，保存來源檔名、ID 與資料。 / Each catalog row becomes a document with source identity.
+- 模型依最近歷史改寫查詢、解析指代；有目錄 ID 時查真實資料列並補相關醫生／診所。 / Contextual query rewriting precedes exact-ID retrieval.
+- 無 ID 時做雙語詞彙擴展、去除停用詞，以參數化 FTS5 MATCH 查詢、BM25 排序，最多六筆。 / Otherwise use lexical retrieval, limited to six ranked results.
+- 回答模型根據檢索內容生成；病史與預約另外注入，不進通用知識索引。 / Patient context is separate from the general knowledge index.
 
-FTS5 is intentionally a lexical retriever, not a dense embedding vector store. For this eleven-record knowledge catalog it is transparent, deterministic, fully local and easy to audit. It does not understand all synonyms or medical terminology. The LLM can improve the language of the answer, but only catalog evidence is supplied as factual support. For a larger catalog, the retrieval interface can be replaced with hybrid vector/lexical search and evaluated on a labelled question set.
+目前沒有 embedding、向量資料庫或 reranker。路由模型仍看到完整小型目錄，回答階段才縮小證據；大資料量應在路由前先取候選。來源標籤不等於每句生成內容已自動驗真。
+No dense retrieval is implemented. Full-catalog routing is a scaling limitation, and citations are not sentence-level fact verification.
 
-Citations are attached to retrieved rows, not presented as medical research. Patient history is separately injected and is never indexed in the general knowledge corpus. Allergy concerns are routed to a discussion with a general practitioner; the catalog does not contain an allergy-testing service, and the system must not invent one.
+FTS5 的優點是本機、可解釋且易驗證，代價是同義詞與口語召回有限。未來可比較 BM25 與混合檢索，但須使用標註題庫衡量召回、無答案行為及延遲，不能假定向量化必然更好。
+The lexical baseline favors simplicity; hybrid retrieval remains a proposal requiring evaluation.
 
-## 5. Relational schema and persistence
+## 4. 資料模型與初始化 / Data model and initialization
 
-- clinics(clinic_id PK): contact, hours, cancellation and emergency information.
-- doctors(doctor_id PK, clinic_id FK): specialty, languages, consultation fee, biography.
-- treatments(treatment_id PK): service category, duration, price and preparation.
-- patients(patient_id PK): demographics, allergies and emergency contact.
-- patient_bookings(booking_id PK, patient_id FK, doctor_id FK, treatment_id FK): local date/time, status and notes.
-- patient_treatment_history(record_id PK, patient_id FK, doctor_id FK): past visits and clinician notes.
-- sessions(id PK, state JSON): draft and bounded conversational history.
-- requests(id PK, payload, response JSON): exactly-repeatable successful chat responses.
-- booking_keys(id PK, payload, booking_id FK): transactional booking deduplication.
-- knowledge: FTS5 virtual table, rebuilt from database catalog at startup.
+| 表 / Table | 用途 / Purpose |
+|---|---|
+| `clinics`、`doctors`、`treatments` | 診所、醫生、服務目錄 / Catalog |
+| `patients`、`patient_treatment_history` | 病人與就診歷史 / Patient context |
+| `patient_bookings` | 原始及新建預約，關聯病人、醫生與療程 / Persistent appointments |
+| `sessions` | 草稿、歷史及暫緩狀態 / Conversation state |
+| `requests` | 成功聊天回覆快取 / Successful chat response cache |
+| `booking_keys` | 預約請求去重 / Booking idempotency |
+| `knowledge` | FTS5 虛擬表 / Full-text index |
+| `request_traces`、`llm_spans` | 本機追蹤 / Observability |
 
-SQLite foreign keys are enabled on every connection. Seed records are inserted only if their IDs do not exist. New bookings never modify the supplied CSV files. Parameterized SQL is used for input values; table names and seed columns are trusted application constants or checked against schema.
+每條連線啟用外鍵；輸入值使用參數化 SQL。六份 CSV 以 `INSERT OR IGNORE` 初始化：修改 CSV 不會更新既有 ID，新增預約也不回寫 CSV。FTS 索引啟動時由資料庫目錄重建。
+Seeding inserts missing IDs rather than migrating existing rows. See [MAINTENANCE](MAINTENANCE.md) for safe updates and backup.
 
-Booking INSERT and idempotency-key INSERT share a BEGIN IMMEDIATE transaction. A repeated key/payload returns the original booking; different payload returns 409. The initial draft key derives deterministically from session/request IDs. Even if the booking commits but saving the chat response fails, retrying the same chat request returns the same booking rather than creating another.
+## 5. 交易與重試 / Transactions and retries
 
-An application-level asyncio lock serializes chat state transitions in the single-worker MVP. API booking transactions independently serialize writes. Multi-worker/distributed chat deployments would require transactional per-session locking; they are not supported by the demo launcher.
+預約及其冪等鍵在同一 `BEGIN IMMEDIATE` 交易保存。同鍵同內容返回原預約，不同內容回 409。聊天則以 session/request ID 保存成功結果，前端網路重試保留原 ID 與訊息。
+Booking writes and their idempotency records are atomic; chat responses have a separate successful-request cache.
 
-## 6. Explicit assumptions
+預約交易與聊天狀態保存**不是同一交易**。若預約已成功但聊天保存失敗，原請求重試透過穩定的預約鍵取得原預約，避免重複寫入。預約成功或拒絕訊息直接依 API 結果產生，不再依賴一次模型生成。
+Recovery across the two transactions relies on idempotency. Booking confirmations are authoritative API results.
 
-- Fixed P001 John Doe; attempts to select another patient are rejected. No authentication is implemented.
-- Data gives no doctor-treatment join table. An explicit mapping connects specialty-compatible services: T001→D101, T002→D102, T003→D103, T004→D101/D102, T005→D104.
-- P001 is an adult; the pediatric vaccination service is rejected for this patient.
-- C001 uses America/New_York and C002 America/Los_Angeles, inferred from supplied addresses. Dates/times remain clinic-local and UI shows the timezone.
-- The assignment assumes all requested slots are available. No collision, opening-hours or resource-availability enforcement is performed.
-- New appointments must be in the future. Existing historical CSV bookings remain as supplied.
-- Consultation fees and service prices are displayed as separate source fields; no combined invoice total is inferred.
-- Local relative-date parsing uses New York “tomorrow”; explicit YYYY-MM-DD is recommended for Santa Monica. Advanced ambiguous-date resolution and DST edge-case validation are future work.
+全域 asyncio 聊天鎖保護單程序狀態，會使不同 session 排隊；SQLite 呼叫也是同步的。多 worker／多副本需請求級狀態、每會話協調與適當共享資料庫，不能直接擴容。
+The current design is single-worker, not a distributed or high-concurrency system.
 
-## 7. Reliability, privacy and boundaries
+## 6. 摘要、追蹤與隱私 / Summary, tracing and privacy
 
-The UI retains the original request for network retries and refetches bookings after successful chat. A refresh error is shown separately from a successful booking so it does not pretend the booking failed. Conversation storage persists on the backend, while rendered chat bubbles reset on page reload; a new-chat action starts a new session.
+文字逐字稿摘要只在 LLM 模式啟用，最多 16,000 字元。四欄為主訴、診斷、用藥、醫囑；未提及為 null，非空欄位須附存在於原文的引句。無效輸出最多修復一次，仍錯則失敗。這只驗證來源，不證明臨床語義正確。
+Text extraction uses an application schema and exact evidence checks; it does not perform audio transcription or clinical validation.
 
-Model failures are explicit 502 responses, with no silent local fallback in LLM mode. Logs contain failure categories, not API keys or patient transcripts. CORS permits only the development origins; the default server binds to 127.0.0.1. No authentication or production hardening is implied.
+摘要不注入 P001，也不保存逐字稿；內容會送供應商。聊天表保存對話，追蹤表只保存中繼資料。追蹤失敗不撤銷已成功的業務操作，因此統計可能缺漏。欄位與保留策略見 [OBSERVABILITY](OBSERVABILITY.md)。
+Transcripts, persisted conversations and metadata-only traces have different data-handling boundaries.
 
-LLM mode sends mock patient context to the configured provider. The system prompt treats retrieved text as data and restricts answers to service navigation; output is not clinically validated. This application is unsuitable as a diagnostic or emergency triage system.
+## 7. 假設與取捨 / Assumptions and tradeoffs
 
-The implementation uses the documented Chat Completions function calling format: [OpenAI function calling guide](https://developers.openai.com/api/docs/guides/function-calling). Provider-specific support still requires a live integration check with the selected model.
+| 決策 / Decision | 限制 / Consequence |
+|---|---|
+| 固定成人 P001、無登入 / Fixed adult P001, no authentication | 僅本機示範，非多人正式服務 / Local demonstration only |
+| 自訂 Agent / Custom orchestration | 流程少依賴；複雜化時需重新評估工作流管理 / Simple dependencies, explicit workflow maintenance |
+| SQLite、單 worker / Single-worker SQLite | 易啟動；無水平擴展驗收 / Easy setup, no horizontal scaling |
+| 顯式醫生服務映射 / Explicit compatibility mapping | 原 CSV 無關聯表，需同步維護 / Must maintain mapping with catalog changes |
+| 依題目假設時段可用 / Available-slot assumption | 無衝突或營業時段檢查 / No conflict or opening-hour enforcement |
+| 診所當地日期時間 / Clinic-local dates and times | C001 紐約、C002 洛杉磯，依地址推定；DST 歧義尚未完整測試 / Inferred timezones, incomplete DST coverage |
 
-## 8. Verification and known limits
+映射為 T001→D101、T002→D102、T003→D103、T004→D101/D102、T005→D104；P001 不適用兒童疫苗。新預約須為未來時間，歷史種子資料保留。Local 的 tomorrow／明天以紐約日期計算，跨時區示範宜用明確日期。
+These catalog and timezone assumptions are enforced or documented independently of model output.
 
-Automated tests exercise persisted records through FastAPI, multi-turn completion, interleaved questions, session isolation, retries, failed chat-save recovery, invalid inputs, existing-record retrieval and mocked LLM function calls. With user-configured credentials, Poe Claude Sonnet 5.5 live acceptance now covers the complete workflow; see LIVE_MODEL_REPORT.md.
-
-Structured transcript extraction is now implemented with a strict application schema and verbatim evidence validation. External tracing, automated clinical evaluations, authentication, rate limiting, long-term session retention and booking cancellation/rescheduling remain outside the MVP. Docker files are supplied but not runtime-tested.
-
-
-## 9. Regression fix and maintainability
-
-The reported new-chat utterance “我到医院的流程” previously fell through to lexical search with no matching tokens. The fallback then unconditionally mentioned allergies and generic help; other answers dumped full catalog rows. `answers.py` now separates visit guidance from field-specific factual responses, omits unrelated personal context, and preserves conditional preparation instructions. The React application and API client are independently importable for component/unit tests. New chat also clears unsent input. See MAINTENANCE.md for the feature-to-test matrix and operational procedures.
-
-## 10. Claude, RAG and transcript extension / Claude、檢索與摘要擴充
-
-LLM mode no longer calls is_visit_flow before the model. The route_intent schema adds search_query so Claude can resolve references and rewrite a standalone retrieval query. Catalog IDs select actual database rows and related doctor/clinic records; otherwise FTS5/BM25 is used. This is structured/lexical RAG, not embeddings. The model never provides the factual row contents.
-
-LLM 模式每次由 Claude 先判斷意圖；search_query 用於解析上下文及檢索改寫。目錄 ID 只查真實資料列與關聯，不接受模型自造資料；無 ID 時使用 FTS5/BM25。
-
-llm.py supports both API shapes and records provider response ID, model, latency and token usage without credentials or hidden reasoning. Poe's selected Claude model was verified using Chat Completions, auto tool choice and application validation. Empty answers, incomplete output, absent tool calls and provider failures never silently become local answers.
-
-逐字稿摘要以獨立工具 summarize_transcript 提取四個 nullable 欄位及 evidence。所有非空欄位必須有逐字引用，引用必須出現在原文；未提及欄位為 null。這是來源驗證，不是臨床正確性證明。摘要不使用 P001 個資，也不寫入聊天或預約資料表。
-
-The summary endpoint is stateless, does not inject P001 context and does not persist transcripts. It validates evidence provenance but still requires human semantic review. The browser timeout allows two sequential provider calls; server timeout is configurable from 1 to 180 seconds. Chat execution remains single-worker and serialized.
-
-最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。
+既有預約取消／改期、音訊辨識、外部 Langfuse、身份授權與臨床驗證未實作。部署設定及其未驗收範圍見 [DEPLOYMENT](DEPLOYMENT.md)，原始需求對照見 [REQUIREMENTS_REVIEW](REQUIREMENTS_REVIEW.md)。

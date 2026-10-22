@@ -1,62 +1,90 @@
-> 最新驗收 / Latest: 109 後端＋28 前端＝137 項測試通過，前端正式建置成功。DeepSeek 與 Sonnet 最終各通過 82 項，見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。下文 78/167 項與瀏覽器紀錄是較早階段的歷史驗收。
+# 測試與驗收 / Validation
 
-> 更新 / Update: 本機持久化追蹤與部署操作見 [OBSERVABILITY.md](OBSERVABILITY.md)、[DEPLOYMENT.md](DEPLOYMENT.md)。啟動只載入 .env，程序環境變數優先；不再載入 .env.local。完整同一供應商設定須放在 .env。1.env 僅用於明確選擇的對照測試，所有憑證檔均不提交。 / Startup reads a complete provider profile from .env only.
+**功能驗收日期 / Recorded acceptance: 2026-10-22.**
+文件於 2026-10-23 整理；本次文件整理未重跑付費模型或產生新功能測試成績。
+Documentation was reorganized on October 23; the results below retain their original acceptance date.
 
-# 測試與驗收 / Validation — 2026-10-22
+## 1. 最新結果 / Latest recorded results
 
-## 已完成 / Completed
-
-- 真實 Poe Claude Sonnet 5.5：14 則對話及 2 則逐字稿摘要，78 項檢查通過。另有逐字稿指令注入測例，診斷與用藥保持 null。 / Live Claude: 14 chat turns, two summaries, 78 passing checks, plus a transcript-injection case.
-- 後端 109 項單元／整合測試通過；前端 28 項單元／元件測試通過，共 137 項。 / 109 backend and 28 frontend tests passed, 137 total.
-- 後端覆蓋率 98.01%（行與分支合併，backend/app 全部模組）；前端核心元件與 API 最近覆蓋率為行與函式 100%，敘述 99.23%，分支 93.83%。 / Backend combined coverage 98.01%; latest frontend core coverage is 100% lines/functions, 99.23% statements and 93.83% branches.
-- 額外真實情境 167 項檢查通過，修復後原始完整流程 78 項亦通過；最後文案調整另有 4 項針對性檢查。發現與修正詳見 [EXTENDED_TEST_REPORT.md](EXTENDED_TEST_REPORT.md)。 / 167 additional live checks and the 78-check core rerun passed, plus four final formatting checks; see the extended report.
-- React 正式建置成功。 / Production build passed.
+| 驗證 / Validation | 結果 / Result |
+|---|---|
+| 後端單元／整合 / Backend unit and integration | 109 passed |
+| 前端單元／元件 / Frontend unit and component | 28 passed |
+| 自動化測試合計 / Automated test total | 137 passed |
+| 後端行／分支合併覆蓋率 / Backend combined coverage | 98.01% |
+| 前端覆蓋率 / Frontend coverage | Lines/functions 100%; statements 99.23%; branches 93.83% |
+| React 正式建置 / Production build | Passed |
+| DeepSeek、Poe Sonnet 真實流程 / Live provider acceptance | 各 / each 82/82 checks |
+| 部署設定離線驗證 / Offline deployment validation | 2 Compose files, 5 Kubernetes resources |
+| Docker／Kubernetes 執行 / Container and cluster runtime | 未驗收 / Not verified |
+| 雲端 CI / Cloud CI | 無本版成功證據 / No successful run claimed for this implementation |
 
 環境 / Environment: Windows, Python 3.13, Node 22.15, Vite 6.4.5, Vitest 4.1.12.
+覆蓋率反映程式執行路徑，不是自然語言理解或臨床正確率。 / Coverage is not language or clinical accuracy.
 
-## 真實流程 / Live flow
+## 2. 測試分層與責任 / Test layers and coverage
 
-就診流程 → 過敏服務推薦 → 指代追問診金 → 皮膚科推薦 → 現有預約 → 新預約草稿 → 從前文選擇醫生與服務 → 中途詢問準備事項 → 中文日期時間 → REST 儲存 → GET 列表與 SQL 核對 → 同請求重試 → 不匹配醫生服務拒絕與更正 → 取消草稿 → 重啟持久化 → 逐字稿摘要。
+| 層次 / Layer | 位置 / Location | 涵蓋範圍 / Coverage |
+|---|---|---|
+| 核心單元 / Core units | [test_units.py](backend/tests/test_units.py) | 路由、欄位、回答、翻譯、檢索與驗證 / Routing, slots, answers, localization, retrieval |
+| API／資料 / API and database | [test_app.py](backend/tests/test_app.py)、[test_regressions.py](backend/tests/test_regressions.py) | 真實 SQLite、種子、FTS、狀態、持久化、錯誤與重試 / Persistence and API regressions |
+| 提交與邊界 / Submission controls | [test_extended.py](backend/tests/test_extended.py) | hold、撤回、更正、跨輪／重啟、併發重試／衝突 / Consent, state and idempotency boundaries |
+| 模型／摘要 / Provider and summary | [test_llm_features.py](backend/tests/test_llm_features.py) | API 形狀、錯誤、路由修復、摘要引文、null、無副作用 / Mocked contracts and bounded repairs |
+| 追蹤 / Tracing | [test_observability.py](backend/tests/test_observability.py) | 隔離、保留、隱私、錯誤與重啟 / Lifecycle, retention and failure handling |
+| 部署設定 / Deployment configuration | [test_deployment.py](backend/tests/test_deployment.py) | Schema 與資源參照；不執行容器 / Offline validation only |
+| 前端 / Frontend | [frontend/src/test](frontend/src/test) | 聊天、API、摘要、追蹤、刷新、輸入法及重試 / UI and API-client behavior |
+| 真實核心流程 / Live core flow | [live_acceptance.py](scripts/live_acceptance.py) | 真實供應商、REST／SQL、持久化與追蹤 / End-to-end provider acceptance |
+| 真實額外情境 / Live edge cases | [expanded_acceptance.py](scripts/expanded_acceptance.py) | 暫緩、撤回、歧義、引用與摘要 / Expanded behavioral cases |
 
-The complete live flow covers contextual retrieval, all routing intents, slot collection, interleaving, natural date/time, REST execution, SQL persistence, retry deduplication, correction, draft cancellation, restart and summary extraction.
+單元／整合測試中的受控模型輸出驗證應用邏輯；真實模型測試另外驗證供應商與實際語言行為，兩者不可互相替代。
+Mocked contracts and live-provider evidence answer different questions.
 
-證據記錄包含實際模型名稱、provider response ID、每次模型 token 與耗時；沒有用模擬回覆代替真實測試。供應商相容性問題與量測見 [LIVE_MODEL_REPORT.md](LIVE_MODEL_REPORT.md)。 / Evidence includes real provider metadata; see the live report for compatibility and measured results.
+## 3. 重跑本機測試 / Run local tests
 
-## 瀏覽器驗收 / Browser acceptance
+從專案根目錄，在新的 PowerShell 視窗執行；完成後關閉該視窗，避免測試環境變數影響下一次啟動。
+Run in a fresh PowerShell window from the project root, then close it to discard test-only environment overrides.
 
-使用隔離資料庫和 8017 埠，並未把測試預約加入使用者 8000 服務的資料庫。
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+$env:PYTHONPATH="backend"
+$env:AI_MODE="local"
+.\.venv\Scripts\python.exe -m coverage run -m unittest discover -s backend/tests -v
+.\.venv\Scripts\python.exe -m coverage report
+.\.venv\Scripts\python.exe -m coverage html
+cd frontend
+npm.cmd ci
+npm.cmd run test:coverage
+npm.cmd run build
+cd ..
+```
 
-Used an isolated database on port 8017, separate from the user's port-8000 database.
+後端測試使用 `runtime/tests` 下獨立資料庫，不寫入 `runtime/clinic.db`。HTML 報告位於 `runtime/coverage-backend/index.html` 及 `frontend/coverage/index.html`。
+Backend tests isolate database state; the paths above contain coverage reports.
 
-1. 頁面顯示 LLM 與 claude-sonnet-5.5，初始預約 2 筆。 / Model badge and two seeded bookings displayed.
-2. 點就診流程問題，得到有來源的繁英流程。 / Visit question returned grounded bilingual guidance.
-3. 輸入「我想預約莎拉醫生的一般健康檢查」，模型選 D101/T001 並追問日期時間。 / Natural-language selection collected missing date/time.
-4. 輸入「2035年12月5日上午十點」，預約 B894824B4B332 儲存，列表從 2 筆變 3 筆。 / Booking persisted and the visible list increased to three.
-5. 逐字稿首次生成發現引文不完全匹配，後端回錯誤並阻止成功顯示。加入最多一次修復後，頁面重測成功，呈現四欄繁英摘要、原文引句及 JSON 入口。 / The initial summary failed exact evidence validation; after adding one bounded repair, browser retest displayed the four fields, quotes and JSON.
-6. 移除內部 request ID 上下文後，新草稿追問更精簡，未再顯示內部編號。 / Targeted browser retest confirmed concise draft prompts without internal IDs.
+門檻為後端合併覆蓋率 95%；前端行／敘述／函式 90%、分支 80%。前端 `.npmrc` 的 `legacy-peer-deps` 配合已鎖定測試依賴，需保留於安裝與容器建置流程。
+Coverage gates are enforced by the existing test configuration; preserve the committed npm configuration.
 
-完整 78 項實測之後，另作上述引文修復與草稿文案修正，並重新通過後端全套測試及針對性瀏覽器重測。沒有因模型非決定性而把一次成功視為所有問法都可靠。
+## 4. 真實流程與重現 / Live acceptance and reproduction
 
-After the 78-check run, the evidence-repair and draft-prompt adjustments received full backend regression and targeted browser retests. A successful run does not imply universal language reliability.
+最新兩模型對照包含 14 輪對話、2 則摘要及 1 次快取重試；核對問答、指代、意圖、缺欄位、中途問答、建立與更正、草稿取消、REST／SQL 紀錄、重啟與追蹤用量。
+The live suite checks conversational behavior and actual persisted results rather than generated success text alone.
 
-## 測試位置與重跑 / Reproduction
+供應商設定、完整命令、量測及 run ID 統一維護於 [MODEL_COMPARISON](MODEL_COMPARISON.md)。執行會消耗 API 額度，報告及隔離 DB 留在本機 runtime；不發布原始對話或憑證。
+Use the comparison report as the reproducibility reference. Retain failed runs and investigate them rather than rerunning until success.
 
-- backend/tests/test_units.py：驗證、路由、回答、翻譯、檢索單元測試。 / Core units.
-- backend/tests/test_app.py、test_regressions.py：真實 SQLite/API 與持久化、檢索範圍。 / Database/API regressions.
-- backend/tests/test_llm_features.py：API 相容性、錯誤、摘要 schema/evidence、一次修復與無副作用。 / Provider and summary contracts.
-- frontend/src/test：聊天、API、摘要元件及失敗恢復。 / React/API component tests.
-- scripts/live_acceptance.py：需憑證的真實模型全流程，輸出至 runtime/live-acceptance。 / Opt-in paid live suite.
+## 5. 歷史證據 / Historical evidence
 
-完整命令、備份還原與功能對照見 [MAINTENANCE.md](MAINTENANCE.md)。 / See the maintenance manual for commands and feature mapping.
+- [LIVE_MODEL_REPORT](LIVE_MODEL_REPORT.md)：早期 Claude 78 項核心驗收、瀏覽器引文失敗與修復。 / Earlier Claude acceptance and browser findings.
+- [EXTENDED_TEST_REPORT](EXTENDED_TEST_REPORT.md)：暫緩／撤回等真實問題、167 項額外檢查及中間失敗紀錄。 / Additional scenarios and regression history.
 
-## 尚未驗證 / Not verified
+歷史數量不與最新 82 項相加，也不是目前測試總數。當時瀏覽器測試使用隔離 8017 埠，完成繁英回答、多輪新增、列表更新及摘要；不能當成所有模型、環境或問法的瀏覽器驗收。
+Historical counts describe different revisions and suites, not extra current coverage or a user success rate.
 
-GPT-6 Astra High 指 Codex 對話模型，未作獨立 API 對跑，無其延遲、用量或分數。比較文件中的 Codex 欄位是審核意見，不是第二組模型實測。
+## 6. 尚未驗證 / Unverified boundaries
 
-The Codex-selected GPT model was not run as an independent API benchmark. Review comments are not benchmark results.
+- 廣泛自然語言品質、臨床正確性、完整提示注入防護。 / Comprehensive language, clinical and security quality.
+- Docker／Kubernetes runtime、其他作業系統、多 worker、負載及完整 DST 歧義。 / Container runtime, cross-platform, distributed/load and DST behavior.
+- GPT-6 Astra High 沒有獨立 API 對跑，沒有其延遲、Token 或得分。 / The Codex-selected model was not independently benchmarked.
+- [先前 GitHub Actions run](https://github.com/gjtjx/KUDOS/actions/runs/39775522266) 因帳號帳單限制未執行；本次未重新驗證帳號狀態，也未宣稱雲端 CI 通過。 / An earlier run was blocked; current account eligibility has not been rechecked.
 
-GitHub Actions 先前因帳號帳單鎖定未啟動：[run 39775522266](https://github.com/gjtjx/KUDOS/actions/runs/39775522266)。本機測試通過不代表雲端 CI 通過。Docker runtime、其他作業系統、多 worker、負載、DST 歧義時間及臨床正確性仍未驗收。未實作錄音轉文字、外部 Langfuse；Kubernetes 已提供設定，runtime 尚未驗收。
-
-Cloud CI remains blocked by the previously reported account lock. Docker, cross-platform, distributed/load, DST and clinical validation remain outside acceptance. Audio transcription and external Langfuse are not implemented; Kubernetes manifests are provided, runtime unverified.
-
-最新模型對照與相容設定 / Current provider comparison: [MODEL_COMPARISON.md](MODEL_COMPARISON.md)。
+部署驗收程序見 [DEPLOYMENT](DEPLOYMENT.md)，失敗排查見 [MAINTENANCE](MAINTENANCE.md)。
