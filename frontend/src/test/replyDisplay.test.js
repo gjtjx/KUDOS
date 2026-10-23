@@ -1,5 +1,5 @@
 import {test,expect} from 'vitest';
-import {replyDisplay} from '../replyDisplay';
+import {replyDisplay,draftDisplay,treatmentDisplay} from '../replyDisplay';
 
 test('removes citation-only parentheses in both languages',()=>{
   expect(replyDisplay('診金 USD 150。（來源：doctors.csv，D101）\nFee USD 150. (Source: doctors.csv, D101)'))
@@ -66,4 +66,25 @@ test('preserves booking IDs even inside source references',()=>{
 });
 test('handles ID followed by parenthesized name and compact suffix separators',()=>{
   expect(replyDisplay('D101（Dr. Sarah Jenkins） · Dr. Sarah Jenkins·D101',catalog)).toBe('Dr. Sarah Jenkins · Dr. Sarah Jenkins');
+});
+
+test('draft resolves names without mutating internal IDs or appointment date and time',()=>{
+  const draft={doctor_id:'D101',treatment_id:'T001',booking_date:'2035-11-08',booking_time:'09:30'};
+  expect(draftDisplay('doctor_id',draft.doctor_id,catalog)).toBe('Dr. Sarah Jenkins');
+  expect(draftDisplay('treatment_id',draft.treatment_id,catalog)).toBe('一般健康檢查 / General Health Checkup');
+  expect(draftDisplay('booking_date',draft.booking_date,catalog)).toBe('2035-11-08');
+  expect(draftDisplay('booking_time',draft.booking_time,catalog)).toBe('09:30');
+  expect(draft.doctor_id).toBe('D101');expect(draft.treatment_id).toBe('T001');
+});
+test('draft handles missing catalog, unknown IDs and missing fields without exposing IDs',()=>{
+  expect(draftDisplay('doctor_id','D101',null)).toContain('Loading doctor');
+  expect(draftDisplay('treatment_id','T001',null)).toContain('Loading service');
+  expect(draftDisplay('doctor_id','D999',catalog)).toContain('Unidentified doctor');
+  expect(draftDisplay('treatment_id','T999',catalog)).toContain('Unidentified service');
+  expect(draftDisplay('doctor_id','',catalog)).toBe('待填寫 / Required');
+});
+test('service display supports Chinese aliases and avoids duplicated untranslated names',()=>{
+  expect(treatmentDisplay({treatment_name:'Test',treatment_name_zh:'測試'})).toBe('測試 / Test');
+  expect(treatmentDisplay({treatment_name:'Test'})).toBe('Test');
+  expect(treatmentDisplay({treatment_name:'Test',zh:{treatment_name:'Test'}})).toBe('Test');
 });

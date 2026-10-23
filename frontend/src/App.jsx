@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 
 import { api } from './api';
-import { replyDisplay } from './replyDisplay';
+import { replyDisplay, draftDisplay, treatmentDisplay } from './replyDisplay';
 import TranscriptSummary from './TranscriptSummary';
 import TracePanel from './TracePanel';
 const uuid=()=>crypto.randomUUID();
@@ -12,7 +12,7 @@ const suggestions=[
   ['我到醫院的流程','What should I expect when visiting the clinic?'],
   ['我有花生過敏，可以諮詢誰？','Who can I consult about my peanut allergy?'],
   ['我的下一次預約是甚麼時候？','When is my next appointment?'],
-  ['幫我預約 D101 的 T001 體檢','Book a T001 checkup with D101'],
+  ['幫我預約 Dr. Sarah Jenkins 的一般健康檢查','Book a General Health Checkup with Dr. Sarah Jenkins'],
   ['診所的取消政策是甚麼？','What are the clinic cancellation policies?']
 ];
 function Pair({zh,en}){return <><span lang="zh-Hant">{zh}</span><span className="translation" lang="en">{en}</span></>}
@@ -57,14 +57,14 @@ export default function App(){
           {messages.map((m,i)=><article key={i} className={'message '+m.role}><span className="who">{m.role==='user'?'你 / YOU':'CLINICPILOT'}</span><div className="bubble">{m.role==='assistant'?replyDisplay(m.text,catalog):m.text}</div>{m.tool_trace&&<details><summary>{m.mode==='local'?'本機規則 / Local rules':'LLM'} · {intentLabels[m.intent]||m.intent} · {m.latency_ms} ms · 查看呼叫紀錄 / Tool trace</summary>{m.tool_trace.map((t,j)=><div key={j}>{t.tool} → {t.status==='ok'?'成功 / OK':t.status==='rejected'?'已拒絕 / Rejected':t.status}{t.booking_id?' · '+t.booking_id:''}{t.model?' · '+t.model:''}{t.response_id?' · '+t.response_id:''}</div>)}</details>}</article>)}
           {busy&&<p className="thinking" role="status">正在處理，請稍候… / Working on your request…</p>}<div ref={bottom}/>
         </div>
-        {Object.keys(draft).length>0&&<div className="draft"><b>預約草稿 / Booking draft</b>{['doctor_id','treatment_id','booking_date','booking_time'].map(k=><span key={k}>{slotLabels[k]}: {draft[k]||'待填寫 / Required'}</span>)}</div>}
+        {Object.keys(draft).length>0&&<div className="draft"><b>預約草稿 / Booking draft</b>{['doctor_id','treatment_id','booking_date','booking_time'].map(k=><span key={k}>{slotLabels[k]}: {draftDisplay(k,draft[k],catalog)}</span>)}</div>}
         {error&&<div role="alert" className="error">{error}{retry&&<button disabled={busy} onClick={()=>send(retry.message,retry)}>重試 / Retry request</button>}</div>}
         <form onSubmit={e=>{e.preventDefault();send()}}><label className="sr-only" htmlFor="message">輸入訊息 / Message</label><textarea id="message" placeholder="輸入訊息 / Message — 2035-11-08, 09:30" value={input} onChange={e=>setInput(e.target.value)} maxLength={4000} disabled={busy} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send()}}}/><button className="send" disabled={busy||!input.trim()} type="submit">傳送 / Send ↑</button></form>
         <p className="footnote">服務導覽與預約示範，不提供診斷或處方。時間採診所當地時區。 / Service navigation and booking demo, not diagnosis or prescribing. Times use the clinic’s local timezone.</p>
       </section>
       <aside><section className="panel"><div className="panel-title"><div><h3>我的預約 / My bookings</h3><span>資料庫紀錄 / Database records · {bookings.length}</span></div><button onClick={refresh}>重新整理 / Refresh</button></div><div className="bookings">{bookings.length?bookings.map(b=><article className="booking" key={b.booking_id}><span className="status">{b.status_label||b.status}</span><h4><Pair zh={b.treatment_name_zh||b.treatment_name} en={b.treatment_name}/></h4><p>{b.doctor_name}</p><strong>{b.booking_date} · {b.booking_time.slice(0,5)}</strong><small>{b.clinic_name} · {b.timezone}</small><small className="id">{b.booking_id}</small></article>):<p className="empty">暫無預約，或正在載入。 / No bookings, or still loading.</p>}</div></section>
       <section className="panel guide"><span className="eyebrow">使用方式 / HOW IT WORKS</span><h3>三步完成預約 / Book in three steps</h3><ol><li><Pair zh="選擇醫生與服務" en="Choose a doctor and treatment"/></li><li><Pair zh="提供日期與當地時間" en="Provide a date and local time"/></li><li><Pair zh="資訊齊全後自動儲存，預約列表即時更新" en="Complete details are saved; the bookings list updates"/></li></ol><p>本機模式支援醫生及服務名稱或編號；日期建議使用 YYYY-MM-DD。 / Local mode accepts doctor and service names or IDs. Use YYYY-MM-DD for dates.</p></section>
-      {catalog&&<details className="panel catalog"><summary>查看醫生與服務目錄 / Doctors & services</summary>{catalog.doctors.map(d=><p key={d.doctor_id}><b>{d.doctor_id} · {d.full_name}</b><br/>{d.zh?.specialty} / {d.specialty} · 診金 / Consultation ${d.consultation_fee_usd}</p>)}{catalog.treatments.map(t=><p key={t.treatment_id}>{t.treatment_id} · {t.zh?.treatment_name} / {t.treatment_name}<br/>${t.price_usd} · {t.duration_minutes} 分鐘 / min</p>)}</details>}
+      {catalog&&<details className="panel catalog"><summary>查看醫生與服務目錄 / Doctors & services</summary>{catalog.doctors.map(d=><p key={d.doctor_id}><b>{d.full_name}</b><br/>{d.zh?.specialty} / {d.specialty} · 診金 / Consultation ${d.consultation_fee_usd}</p>)}{catalog.treatments.map(t=><p key={t.treatment_id}>{treatmentDisplay(t)}<br/>${t.price_usd} · {t.duration_minutes} 分鐘 / min</p>)}</details>}
       </aside>
     </main><TranscriptSummary mode={health?.mode}/><TracePanel/><footer>CLINICPILOT AI · 作業原型 / Take-home MVP <span>React / FastAPI / SQLite</span></footer>
   </div>;

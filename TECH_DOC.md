@@ -171,3 +171,6 @@ The presentation-only formatter hides source badges and filenames while retainin
 
 聊天正文的 D/T 編號由同一份 `/api/catalog` 的醫生、服務資料轉為名稱，繁中段落優先顯示服務中文名，英文段落顯示原名稱；相鄰的名稱與編號去重。未知編號顯示未識別項目，不猜姓名；B 開頭的預約編號完整保留，包括引用片段。只處理助理 bubble，使用者輸入、API 原文、草稿資料與交易參數不變。
 Doctor/service IDs are resolved from the live catalog at render time, with localized treatment names and adjacent-ID deduplication. Booking IDs remain intact, including within references. Unknown IDs use an explicit unidentified label; no name is invented.
+
+草稿以 `draftDisplay` 從目錄解析醫生全名與繁英服務名稱，日期／時間原樣顯示；右側目錄省略可見編號，React key 仍用內部 ID。目錄未載入、缺欄位或未知編號以對應提示顯示，不猜名稱、不暴露內部編號。快捷預約問題使用名稱，已用本機隔離 API 驗證解析與零寫入。
+Drafts resolve catalog names without changing state IDs; the directory hides visible IDs but retains stable React keys. Unknown/loading/missing values have explicit labels. Named booking suggestions were verified against the local API.

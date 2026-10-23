@@ -1,6 +1,11 @@
 # 提交前驗收 / Submission review
 
-## 最新介面：醫生／服務以名稱顯示 / Latest name display
+## 最新介面：草稿與目錄統一名稱 / Latest draft and directory display
+
+2026-10-23：草稿及右側醫生／服務目錄以名稱顯示，快捷問題也使用名稱，預約編號保留。前端 53 項測試、覆蓋率及建置通過；測試涵蓋名稱、缺欄位、載入中、未知編號、日期時間、預約編號與後台資料不變。另用隔離本機 API 驗證快捷問題解析為原醫生／服務且零寫入。正式應用靜態資產已更新，後端與密鑰未改；不重跑付費模型或部署驗收。
+The latest display-only patch passed 53 frontend tests and build plus one isolated local-API check for the named suggestion. Prior backend/live evidence retains the scope below.
+
+## 前次介面：回覆中的醫生／服務以名稱顯示 / Latest name display
 
 2026-10-23：回覆正文的 D/T 內部編號改為當前目錄中的醫生／服務名稱，去除相鄰重複編號；預約編號保留。未知編號不猜姓名，使用者輸入及後端資料不變。前端 49 項測試、覆蓋率門檻及建置通過；正式應用靜態資產已更新。未更改後端、模型或預約邏輯，未重跑付費模型或部署驗收。
 The latest presentation-only patch passed 49 frontend tests and build; booking IDs are preserved, including in source references. Prior backend/live evidence retains the scope stated below.

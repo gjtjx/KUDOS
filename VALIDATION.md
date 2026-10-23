@@ -9,7 +9,7 @@ Current results cover the JSON-prompt conflict and negated-inference validator f
 | 驗證 / Validation | 結果 / Result |
 |---|---|
 | 後端單元／整合 / Backend | 157 passed; 97.50% combined line/branch coverage |
-| 前端元件／單元 / Frontend | 49 passed; production build passed (latest display-only change) |
+| 前端元件／單元 / Frontend | 53 passed; production build passed (latest display-only change) |
 | 真實核心流程與摘要 / Live core and summaries | 82/82 checks |
 | 患者醫生關係 / Patient-doctor relationships | 10 scenarios / 14 turns / 127 checks passed |
 | 原失敗問法重複 / Original failing conversation | 6 repetitions / 12 turns / 96 checks passed |
@@ -20,7 +20,7 @@ Current results cover the JSON-prompt conflict and negated-inference validator f
 | 部署設定 / Deployment configuration | 2 Compose variants / 5 Kubernetes resources checked offline |
 | 雲端 CI、容器與叢集執行 / Cloud CI and runtime | Not verified |
 
-最近驗證為 157 項後端（雙語修復完整測試）與 49 項前端（最新來源／內部編號展示改動）。本次僅重跑前端測試與建置；後端及模型未變。前端 statements 99.37%、branches 94.31%、lines/functions 100%，包含新展示函式。覆蓋率不是模型正確率。
+最近驗證為 157 項後端（雙語修復完整測試）與 53 項前端（最新草稿／目錄名稱展示改動）。本次僅重跑前端測試與建置；後端及模型未變。前端 statements 99.43%、branches 94.84%、lines/functions 100%，包含新展示函式。覆蓋率不是模型正確率。
 The latest UI-only patch reran frontend tests and build; backend/live results retain their prior full-review scope.
 
 

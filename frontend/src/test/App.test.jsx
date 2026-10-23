@@ -20,7 +20,7 @@ async function send(user,text='我到医院的流程'){await user.type(screen.ge
 test('loads bilingual profile, booking list, mode and catalog',async()=>{
   await mount(); expect(screen.getByText('LOCAL · 本機示範 / Local demo')).toBeInTheDocument();
   expect(screen.getByText('B1')).toBeInTheDocument();expect(screen.getByText(/青黴素、花生/)).toBeInTheDocument();
-  expect(screen.getByText(/D101 · Dr. Sarah/)).toBeInTheDocument();
+  expect(document.querySelector('.catalog')).toHaveTextContent('Dr. Sarah Jenkins');expect(document.querySelector('.catalog').textContent).not.toMatch(/D101|T001/);
 });
 test('new conversation sends reported phrase and renders grounded response and trace',async()=>{
   const user=await mount();await send(user);
@@ -36,11 +36,15 @@ test('suggested question submits Traditional Chinese',async()=>{
 
 test('patient doctor question shows relationship answer and preserves booking draft',async()=>{
   api.mockImplementation(async(path)=>path==='/chat'?{...reply,intent:'patient_doctors',reply:'未指定主治醫生 / No assigned primary doctor',draft:{doctor_id:'D103',treatment_id:'T003'},sources:[{source:'patient_treatment_history.csv',id:'H9002'}],tool_trace:[{tool:'GET /api/patient-doctors',status:'ok'}]}:initial[path]);
+  initial['/catalog'].doctors.push({doctor_id:'D103',full_name:'Dr. Elena Rostova'});initial['/catalog'].treatments.push({treatment_id:'T003',treatment_name:'Dermatology Consultation',zh:{treatment_name:'皮膚科諮詢'}});
   const user=await mount();await send(user,'我的医生是？');
   expect(await screen.findByText('未指定主治醫生 / No assigned primary doctor')).toBeInTheDocument();
   expect(screen.getByText(/我的醫生 \/ My doctors ·/)).toBeInTheDocument();
   expect(screen.queryByText('patient_treatment_history.csv · H9002')).not.toBeInTheDocument();
-  expect(screen.getByText('醫生 / Doctor: D103')).toBeInTheDocument();
+  expect(screen.getByText('醫生 / Doctor: Dr. Elena Rostova')).toBeInTheDocument();
+  expect(screen.getByText('服務 / Treatment: 皮膚科諮詢 / Dermatology Consultation')).toBeInTheDocument();
+  expect(document.querySelector('.draft').textContent).not.toMatch(/D103|T003/);
+  initial['/catalog'].doctors.pop();initial['/catalog'].treatments.pop();
   expect(screen.getByText('B1')).toBeInTheDocument();
 });
 test('empty or whitespace input cannot send',async()=>{
@@ -58,7 +62,7 @@ test('pending request prevents duplicate sends and reset',async()=>{
 test('draft shows missing fields then successful booking refreshes list',async()=>{
   const user=await mount();let calls=0;
   api.mockImplementation(async(path)=>path==='/chat'?(++calls===1?{...reply,reply:'請補日期與時間',draft:{doctor_id:'D101',treatment_id:'T001'}}:{...reply,reply:'預約已儲存',draft:{}}):path==='/bookings'&&calls===2?[booking,{...booking,booking_id:'B2'}]:initial[path]);
-  await send(user,'Book D101 T001');await screen.findByText('預約草稿 / Booking draft');expect(screen.getByText('日期 / Date: 待填寫 / Required')).toBeInTheDocument();
+  await send(user,'Book D101 T001');await screen.findByText('預約草稿 / Booking draft');expect(screen.getByText('醫生 / Doctor: Dr. Sarah Jenkins')).toBeInTheDocument();expect(screen.getByText('服務 / Treatment: 一般健康檢查 / General Health Checkup')).toBeInTheDocument();expect(screen.getByText('日期 / Date: 待填寫 / Required')).toBeInTheDocument();
   await send(user,'2035-11-08 09:30');await screen.findByText('B2');expect(screen.queryByText('預約草稿 / Booking draft')).not.toBeInTheDocument();
 });
 test('new chat clears messages, draft, unsent text and rotates session',async()=>{
@@ -121,4 +125,12 @@ test('assistant resolves internal IDs to catalog names and retains booking IDs',
   expect(await screen.findByText('B1001: Dr. Sarah Jenkins / General Health Checkup, USD 150')).toBeInTheDocument();
   expect(document.querySelector('.message.assistant .bubble').textContent).not.toMatch(/D101|T001/);
   expect(document.querySelector('.message.user .bubble')).toHaveTextContent('D101 T001');
+});
+
+test('named booking suggestion submits names and preserves booking IDs in the list',async()=>{
+  const user=await mount();const button=screen.getByRole('button',{name:/幫我預約 Dr. Sarah Jenkins 的一般健康檢查/});
+  expect(button.textContent).not.toMatch(/D101|T001/);
+  await user.click(button);await screen.findByText(reply.reply);
+  expect(chats()[0].message).toBe('幫我預約 Dr. Sarah Jenkins 的一般健康檢查');
+  expect(document.querySelector('.bookings .id')).toHaveTextContent('B1');
 });

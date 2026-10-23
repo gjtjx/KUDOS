@@ -8,6 +8,23 @@ function citationOnly(text){
     .replace(/[\s:：,，;；、.。()（）\[\]【】/]+/g,'');
 }
 const escape=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+export function treatmentDisplay(treatment){
+  const zh=treatment.zh?.treatment_name||treatment.treatment_name_zh;
+  return zh&&zh!==treatment.treatment_name?zh+' / '+treatment.treatment_name:treatment.treatment_name;
+}
+export function draftDisplay(key,value,catalog){
+  if(!value)return '待填寫 / Required';
+  if(key==='doctor_id'){
+    if(!catalog)return '醫生資料載入中 / Loading doctor…';
+    return catalog.doctors.find(d=>d.doctor_id===value)?.full_name||'未識別醫生 / Unidentified doctor';
+  }
+  if(key==='treatment_id'){
+    if(!catalog)return '服務資料載入中 / Loading service…';
+    const treatment=catalog.treatments.find(t=>t.treatment_id===value);
+    return treatment?treatmentDisplay(treatment):'未識別服務 / Unidentified service';
+  }
+  return value;
+}
 function entityNames(line,catalog){
   const chinese=/[\u4e00-\u9fff]/.test(line);
   const records=[...(catalog?.doctors||[]).map(d=>({id:d.doctor_id,name:d.full_name,names:[d.full_name]})),
