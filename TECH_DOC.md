@@ -168,3 +168,6 @@ These catalog and timezone assumptions are enforced or documented independently 
 
 聊天介面不顯示來源標籤；`replyDisplay.js` 只在 assistant bubble 隱藏 CSV 檔名與純引用片段。含實際內容的句子保留，內嵌檔名改為「現有資料 / available records」。使用者輸入、後端 reply/sources、模型提示與驗證、RAG 和資料庫均未改動；這不是資料遮罩或權限控制。
 The presentation-only formatter hides source badges and filenames while retaining factual content. Raw replies and evidence remain in the API; user messages are untouched. This is display preference, not access control.
+
+聊天正文的 D/T 編號由同一份 `/api/catalog` 的醫生、服務資料轉為名稱，繁中段落優先顯示服務中文名，英文段落顯示原名稱；相鄰的名稱與編號去重。未知編號顯示未識別項目，不猜姓名；B 開頭的預約編號完整保留，包括引用片段。只處理助理 bubble，使用者輸入、API 原文、草稿資料與交易參數不變。
+Doctor/service IDs are resolved from the live catalog at render time, with localized treatment names and adjacent-ID deduplication. Booking IDs remain intact, including within references. Unknown IDs use an explicit unidentified label; no name is invented.

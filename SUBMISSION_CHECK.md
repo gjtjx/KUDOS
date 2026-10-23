@@ -1,6 +1,11 @@
 # 提交前驗收 / Submission review
 
-## 最新介面調整：隱藏來源 / Latest display-only adjustment
+## 最新介面：醫生／服務以名稱顯示 / Latest name display
+
+2026-10-23：回覆正文的 D/T 內部編號改為當前目錄中的醫生／服務名稱，去除相鄰重複編號；預約編號保留。未知編號不猜姓名，使用者輸入及後端資料不變。前端 49 項測試、覆蓋率門檻及建置通過；正式應用靜態資產已更新。未更改後端、模型或預約邏輯，未重跑付費模型或部署驗收。
+The latest presentation-only patch passed 49 frontend tests and build; booking IDs are preserved, including in source references. Prior backend/live evidence retains the scope stated below.
+
+## 前次介面調整：隱藏來源 / Latest display-only adjustment
 
 2026-10-23：依使用者偏好隱藏聊天來源標籤與 CSV 檔名。後端回覆及 sources 保留，模型、RAG、預約和部署設定未變；不重跑付費模型全量測試。前端 38 項測試及正式建置通過，覆蓋率包含新 formatter；測試核對姓名、價格、日期、條件準備與使用者輸入不被誤刪。正式應用更新靜態資產，重新整理頁面生效。下列為先前雙語修復的完整後端／真實模型驗收。
 The latest patch changes presentation only: 38 frontend tests and build passed. Raw API evidence remains available. The prior backend/live evidence below retains its scope.

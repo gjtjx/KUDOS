@@ -74,7 +74,7 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build (the later display-only patch passed 38 frontend tests and a fresh build), 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
+The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build (the latest display-only patch passed 49 frontend tests and a fresh build), 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
 
 The 502 was reproduced before the fix: a plain-text/JSON prompt conflict triggered repair, then a correct caution (absence of a listed language does not prove inability) was rejected by a keyword guard. Instructions now consistently require internal JSON; the guard distinguishes explicit negated inference from an assertion of inability without crossing punctuation or contrast. Invalid content still has one repair and no silent local fallback.
 
@@ -98,3 +98,5 @@ Future work should prioritize a labelled routing/retrieval evaluation set, acces
 - [MAINTENANCE.md](MAINTENANCE.md): backup, troubleshooting and release operations.
 - [DEPLOYMENT.md](DEPLOYMENT.md): container and Kubernetes procedures.
 - [OBSERVABILITY.md](OBSERVABILITY.md): trace fields, retention and privacy.
+
+The chat formatter resolves doctor/service IDs using the current catalog, removes adjacent redundant IDs and preserves booking IDs. Unknown IDs do not receive guessed names. This changes presentation only; raw API evidence and booking payloads remain unchanged.

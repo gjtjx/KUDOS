@@ -113,3 +113,12 @@ test('hides source filenames in assistant replies without changing user text or 
   expect(document.querySelector('.sources')).toBeNull();
   expect(original.reply).toContain('doctors.csv');expect(original.sources).toHaveLength(2);
 });
+
+test('assistant resolves internal IDs to catalog names and retains booking IDs',async()=>{
+  const raw='B1001: D101 / T001, USD 150';
+  api.mockImplementation(async(path)=>path==='/chat'?{...reply,reply:raw}:initial[path]);
+  const user=await mount();await send(user,'D101 T001');
+  expect(await screen.findByText('B1001: Dr. Sarah Jenkins / General Health Checkup, USD 150')).toBeInTheDocument();
+  expect(document.querySelector('.message.assistant .bubble').textContent).not.toMatch(/D101|T001/);
+  expect(document.querySelector('.message.user .bubble')).toHaveTextContent('D101 T001');
+});
