@@ -71,11 +71,13 @@ Database snapshots and raw reports are local operational data, not submission ar
 - CSV 是缺失 ID 初始化；修改同 ID 欄位後重啟不會覆蓋資料庫。先備份，再做明確可回退的資料遷移。 / Existing records require an explicit migration.
 - 示範重置可指向新的空 DB，保留舊檔；不應為更新目錄刪除預約。 / Reset a separate demo database.
 - FTS 索引啟動時由 DB 目錄重建；更新後檢查來源 ID 與相關問題。 / Verify retrieval after catalog updates.
-- 新增醫生／服務須同步 `MATCHES`、別名、翻譯與測試；新診所須提供時區。 / Maintain mappings and timezone assumptions.
+- 新增醫生／服務須維護 `doctor_treatments`、別名、翻譯與測試；`MATCHES` 僅為空關聯表的初始化預設值。新診所須提供時區。 / Maintain the database bridge; MATCHES seeds an empty bridge only.
 - 路由或回答出錯時，先把實際原句轉成回歸測例，再修改 `agent.py`、`knowledge.py` 或 `answers.py`。 / Reproduce defects before changing behavior.
 
 就診導覽不能虛構櫃台、保險、付款、動線或提前到院規定。保留資料中的條件，例如 T001 僅在已安排抽血時要求空腹。
 Service guidance must preserve missing information and conditional instructions.
+
+患者醫生問題先核對 `GET /api/patient-doctors`、病歷 JOIN 與即時預約狀態；不可把下一次預約或全科專長當成主治指定。既有資料庫在首次使用新版時新增關聯表，保留預約、病歷與會話；升級前按本手冊備份。 / Verify relationship facts before prompts. The additive bridge initialization preserves existing records; back up before updating. To change compatibility, update the bridge in a transaction and recheck both retrieval and booking rejection. An emptied bridge is reseeded on restart.
 
 ## 5. 排錯 / Troubleshooting
 

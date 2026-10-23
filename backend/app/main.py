@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from .db import Database
 from .models import ChatInput, BookingInput
-from .knowledge import MATCHES
+from .patient_doctors import relationships
 from .agent import Agent
 from .llm import ProviderError, configuration
 from .transcripts import TranscriptInput, summarize
@@ -123,6 +123,13 @@ def create_app(db_path=None, data_dir=None):
             raise HTTPException(403, "本示範僅供患者 P001 使用。 / This demo is scoped to patient P001")
         return [localized_booking({**b, "timezone": TIMEZONES[b["clinic_id"]]}) for b in db.rows(BOOKING_SQL + " WHERE b.patient_id=? ORDER BY b.booking_date,b.booking_time,b.booking_id", (patient_id,))]
 
+    @app.get('/api/patient-doctors')
+    def patient_doctors(patient_id: str = 'P001'):
+        if patient_id != 'P001':
+            raise HTTPException(403, '本示範僅供患者 P001 使用。 / This demo is scoped to patient P001')
+        records = {t: db.rows('SELECT * FROM ' + t) for t in ('doctors', 'clinics', 'treatments')}
+        return relationships(db.profile(), bookings(patient_id), records, {})
+
     @app.post("/api/bookings")
     def book(body: BookingInput):
         data = body.model_dump(mode="json")
@@ -136,9 +143,10 @@ def create_app(db_path=None, data_dir=None):
                 ident = previous["booking_id"]
             else:
                 doctors = db.rows("SELECT * FROM doctors WHERE doctor_id=?", (body.doctor_id,))
-                if not doctors or body.treatment_id not in MATCHES:
+                treatments = db.rows('SELECT treatment_id FROM treatments WHERE treatment_id=?', (body.treatment_id,))
+                if not doctors or not treatments:
                     raise HTTPException(422, "醫生或服務編號不存在。 / Unknown doctor or treatment ID")
-                if body.doctor_id not in MATCHES[body.treatment_id]:
+                if not c.execute('SELECT 1 FROM doctor_treatments WHERE doctor_id=? AND treatment_id=?', (body.doctor_id, body.treatment_id)).fetchone():
                     raise HTTPException(422, "醫生與服務不符，請選擇對應專科的醫生。 / Doctor and treatment do not match. Select a doctor with the corresponding specialty.")
                 if body.treatment_id == "T002":
                     raise HTTPException(422, "P001 為成人，本示範不提供兒童疫苗預約。 / P001 is an adult. Pediatric vaccination is not available in this single-patient demo.")

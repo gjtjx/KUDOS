@@ -1,38 +1,34 @@
 # 測試與驗收 / Validation
 
 **最新提交複核 / Latest submission review: 2026-10-23.**
-本頁最新結果對應結束語狀態保護、雙語結構校驗與資格過濾；完整結果見 [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md)。先前失敗與模型比較保留為歷史證據。
-Current results include the fixes found during the fresh-clone review; the earlier provider comparison remains dated separately.
-
-最新完整複測 / Latest full retest: **64 scenarios / 83 turns / 525 checks passed**, including 149 new response/state checks. Backend tests were rerun (130 passed); unchanged frontend results retain their earlier scope. See [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md).
+最新結果涵蓋患者醫生關係、共享醫生服務關聯表與 100 個復診常見問題。完整證據與限制見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。歷史模型比較不與本次數量相加。
+The latest code distinguishes doctor relationships and shares the compatibility table across retrieval and booking validation.
 
 ## 1. 最新結果 / Latest recorded results
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合 / Backend unit and integration | 130 passed |
-| 前端單元／元件 / Frontend unit and component | 28 passed |
-| 自動化測試合計 / Automated test total | 158 (130 backend current + 28 frontend retained) |
-| 後端行／分支合併覆蓋率 / Backend combined coverage | 97.53% |
-| 前端覆蓋率 / Frontend coverage | Lines/functions 100%; statements 99.23%; branches 93.83% |
-| React 正式建置 / Production build | Passed |
-| DeepSeek 真實核心流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
-| DeepSeek 修復回歸 / Fix regressions | 112/112 checks, 11 scenarios / 20 turns |
-| 修復後完整複測 / Full post-fix retest | 64 scenarios / 83 turns; 525/525 checks (376 original + 149 new) |
-| 常見問題 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations |
-| Poe Sonnet 歷史流程 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun |
-| 部署設定離線驗證 / Offline deployment validation | 2 Compose files, 5 Kubernetes resources |
-| Docker／Kubernetes 執行 / Container and cluster runtime | 未驗收 / Not verified |
-| 雲端 CI / Cloud CI | 無本版成功證據 / No successful run claimed for this implementation |
+| 後端單元／整合 / Backend tests | 152 passed; 97.49% combined line/branch coverage |
+| 前端單元／元件 / Frontend tests | 29 passed; production build passed |
+| DeepSeek 核心 / Live core acceptance | Latest: 78/78 checks without summary flag; earlier 82/82 includes summaries |
+| 患者醫生關係 / Patient-doctor relationships | Latest: 123/124 checks; one invalid-bilingual-answer 502 retained. Earlier: 127/127 |
+| 完整回歸 / Full regression | 64 scenarios / 83 turns / 525 checks passed; all 8 expected writes |
+| 復診常見問題 / Follow-up questions | 100 questions / 701 checks passed; zero booking writes |
+| 醫生資訊 / Doctor information | 100 questions / 700 checks passed; zero writes |
+| 指南擴展 / Research-based follow-up | 60 questions / 480 checks passed; source and limits below |
+| 部署設定 / Deployment configuration | 2 Compose variants / 5 Kubernetes resources checked offline |
+| 容器、叢集與雲端 CI / Runtime and cloud CI | Not verified |
 
-環境 / Environment: Windows, Python 3.13, Node 22.15, Vite 6.4.5, Vitest 4.1.12.
-本次為後端修復；前端未變動，28 項結果保留自先前驗證，本次未重跑。 / Frontend results are retained from the unchanged earlier build, not rerun in this backend fix.
-覆蓋率反映程式執行路徑，不是自然語言理解或臨床正確率。 / Coverage is not language or clinical accuracy.
+本機測試合計 181 項（152 後端 + 29 前端），前後端均於本輪重跑。前端 statements 99.23%、branches 93.83%、lines/functions 100%。測試覆蓋率不是模型或臨床正確率。
+All local tests and the frontend build were rerun. Coverage describes executed code paths.
+
+
 
 ## 2. 測試分層與責任 / Test layers and coverage
 
 | 層次 / Layer | 位置 / Location | 涵蓋範圍 / Coverage |
 |---|---|---|
+| 患者醫生關係 / Doctor relationships | [test_patient_doctors.py](backend/tests/test_patient_doctors.py) | Relationship scope, privacy, draft preservation, bridge integrity and shared validation |
 | 最新狀態／雙語回歸 / State and bilingual regressions | [test_remaining_regressions.py](backend/tests/test_remaining_regressions.py) | Closing invariants, eligibility, negative inference, bounded bilingual repair and contextual characters |
 | 回答修復 / Answer regressions | [test_answer_regressions.py](backend/tests/test_answer_regressions.py) | Authorization provenance, held drafts, authoritative lookup, catalog scope, formatting and verbatim evidence |
 | 核心單元 / Core units | [test_units.py](backend/tests/test_units.py) | 路由、欄位、回答、翻譯、檢索與驗證 / Routing, slots, answers, localization, retrieval |
@@ -44,8 +40,11 @@ Current results include the fixes found during the fresh-clone review; the earli
 | 前端 / Frontend | [frontend/src/test](frontend/src/test) | 聊天、API、摘要、追蹤、刷新、輸入法及重試 / UI and API-client behavior |
 | 真實核心流程 / Live core flow | [live_acceptance.py](scripts/live_acceptance.py) | 真實供應商、REST／SQL、持久化與追蹤 / End-to-end provider acceptance |
 | 真實額外情境 / Live edge cases | [expanded_acceptance.py](scripts/expanded_acceptance.py) | 暫緩、撤回、歧義、引用與摘要 / Expanded behavioral cases |
+| 復診常見問題 / Follow-up questions | [followup_questions_acceptance.py](scripts/followup_questions_acceptance.py) | 100 read-only questions; fact anchors, patient isolation and no writes |
+| 醫生資訊 / Doctor information | [doctor_questions_acceptance.py](scripts/doctor_questions_acceptance.py) | 100 questions about four doctors; recorded facts and unknown credentials/schedules |
+| 指南擴展 / Research-based follow-up | [researched_followup_acceptance.py](scripts/researched_followup_acceptance.py) | 60 source-linked questions; unchanged clinical records, privacy and state checks; no clinical-accuracy score |
 | 常見問法 / Common questions | [common_questions_acceptance.py](scripts/common_questions_acceptance.py) | 16 scenarios / 20 turns; inspect response content as well as assertions |
-| 擴大情境 / Diverse scenarios | [diverse_questions_acceptance.py](scripts/diverse_questions_acceptance.py) | 64 scenarios / 83 turns; [latest results and historical findings](REMAINING_FIXES_REPORT.md) |
+| 擴大情境 / Diverse scenarios | [diverse_questions_acceptance.py](scripts/diverse_questions_acceptance.py) | 64 scenarios / 83 turns; [latest results](SUBMISSION_CHECK.md) |
 
 單元／整合測試中的受控模型輸出驗證應用邏輯；真實模型測試另外驗證供應商與實際語言行為，兩者不可互相替代。
 Mocked contracts and live-provider evidence answer different questions.

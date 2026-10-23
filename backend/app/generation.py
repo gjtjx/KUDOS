@@ -9,7 +9,7 @@ def answer_payload(zh, en):
     return {'paragraphs': [{'zh': zh, 'en': en}]}
 
 
-def validate_answer(content, catalog, on_hold=False):
+def validate_answer(content, catalog, on_hold=False, allowed_literals=()):
     try:
         data = json.loads(content)
     except (ValueError, TypeError):
@@ -21,6 +21,7 @@ def validate_answer(content, catalog, on_hold=False):
         raise ValueError('invalid_paragraph_count')
     # Only actual names/values and conventional identifiers may remain in zh.
     literals = {'MRI', 'USD', 'AM', 'PM', 'GET /api/bookings', 'P001', 'John Doe', 'patients.csv', 'patient_treatment_history.csv', 'America/New_York', 'America/Los_Angeles'}
+    literals.update(allowed_literals)
     for records in catalog.values():
         for row in records:
             for value in row.values():
@@ -50,12 +51,12 @@ def validate_answer(content, catalog, on_hold=False):
     return '\n\n'.join(rendered)
 
 
-async def generate_answer(llm, messages, catalog, on_hold=False):
+async def generate_answer(llm, messages, catalog, on_hold=False, allowed_literals=()):
     instruction = (
         '\nOutput ONLY a JSON object: {"paragraphs":[{"zh":"繁體中文段落","en":"Full English counterpart"}]}. '
         'Use 1 to 4 pairs. Each en must fully translate its zh; never repeat Chinese in en. '
         'Each zh must be entirely Chinese except exact catalog names, addresses, IDs, filenames, MRI and USD. Never leave words such as listed or Catalog in Chinese prose. '
-        'Preserve exact original doctor/clinic names. A list of spoken languages records listed abilities; it is not proof that any unlisted language cannot be spoken. Say not listed and confirm with clinic, never does not speak or only speaks. '
+        'Preserve exact original doctor/clinic and patient/contact names. For emergency-contact questions include the recorded name, relationship and phone; do not omit the name to satisfy language formatting. A list of spoken languages records listed abilities; it is not proof that any unlisted language cannot be spoken. Say not listed and confirm with clinic, never does not speak or only speaks. '
         'Do not discuss hypothetical future booking approval steps. An authorized complete unheld draft is submitted automatically; only an explicit user hold requires confirmation. '
         'Use ordinary contextual Chinese spelling: 只有, 只是, 系統. No HTML, escaped linebreaks or Markdown fences. '
         'Use short paired paragraphs with the same facts and citations in each language.'
@@ -64,7 +65,7 @@ async def generate_answer(llm, messages, catalog, on_hold=False):
     for attempt in range(2):
         result = await llm(messages)
         try:
-            return validate_answer(result.get('content'), catalog, on_hold)
+            return validate_answer(result.get('content'), catalog, on_hold, allowed_literals)
         except ValueError as error:
             if attempt:
                 raise ProviderError('invalid_bilingual_answer') from None

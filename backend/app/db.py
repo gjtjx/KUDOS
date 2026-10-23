@@ -4,6 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from .observability import SCHEMA as TRACE_SCHEMA
+from .knowledge import MATCHES
 
 TABLES = {
     "clinics": "clinic_id", "doctors": "doctor_id", "treatments": "treatment_id",
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS treatments(treatment_id TEXT PRIMARY KEY,treatment_na
 CREATE TABLE IF NOT EXISTS patients(patient_id TEXT PRIMARY KEY,first_name TEXT,last_name TEXT,dob TEXT,gender TEXT,phone TEXT,email TEXT,known_allergies TEXT,emergency_contact TEXT);
 CREATE TABLE IF NOT EXISTS patient_bookings(booking_id TEXT PRIMARY KEY,patient_id TEXT NOT NULL REFERENCES patients,doctor_id TEXT NOT NULL REFERENCES doctors,treatment_id TEXT NOT NULL REFERENCES treatments,booking_date TEXT NOT NULL,booking_time TEXT NOT NULL,status TEXT NOT NULL,notes TEXT);
 CREATE TABLE IF NOT EXISTS patient_treatment_history(record_id TEXT PRIMARY KEY,patient_id TEXT REFERENCES patients,doctor_id TEXT REFERENCES doctors,visit_date TEXT,chief_complaint TEXT,diagnosis TEXT,prescribed_medication TEXT,doctor_notes TEXT);
+CREATE TABLE IF NOT EXISTS doctor_treatments(doctor_id TEXT NOT NULL REFERENCES doctors,treatment_id TEXT NOT NULL REFERENCES treatments,PRIMARY KEY(doctor_id,treatment_id));
 CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,state TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,payload TEXT NOT NULL,response TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS booking_keys(id TEXT PRIMARY KEY,payload TEXT NOT NULL,booking_id TEXT NOT NULL REFERENCES patient_bookings);
@@ -41,6 +43,11 @@ class Database:
                         raise ValueError("Unexpected CSV schema: " + table)
                     sql = "INSERT OR IGNORE INTO " + table + "(" + ",".join(columns) + ") VALUES(" + ",".join("?" for _ in columns) + ")"
                     c.executemany(sql, ([row[k] for k in columns] for row in reader))
+            # The supplied CSVs have no doctor/service bridge. Seed the documented
+            # demo mapping once; later startups preserve maintained relationships.
+            if not c.execute('SELECT 1 FROM doctor_treatments LIMIT 1').fetchone():
+                c.executemany('INSERT INTO doctor_treatments VALUES(?,?)',
+                              [(doctor, treatment) for treatment, doctors in MATCHES.items() for doctor in doctors])
             c.execute("DELETE FROM knowledge")
             for table in ("clinics", "doctors", "treatments"):
                 for row in c.execute("SELECT * FROM " + table).fetchall():
@@ -67,8 +74,16 @@ class Database:
 
     def profile(self):
         p = self.rows("SELECT * FROM patients WHERE patient_id='P001'")[0]
-        p["history"] = self.rows("SELECT * FROM patient_treatment_history WHERE patient_id='P001' ORDER BY visit_date DESC")
+        p["history"] = self.rows("""SELECT h.*,d.full_name doctor_name,d.specialty,d.clinic_id,c.clinic_name
+            FROM patient_treatment_history h JOIN doctors d USING(doctor_id)
+            JOIN clinics c USING(clinic_id) WHERE h.patient_id=? ORDER BY h.visit_date DESC,h.record_id""", ('P001',))
         return p
+
+    def treatment_doctors(self):
+        mapping = {}
+        for row in self.rows('SELECT treatment_id,doctor_id FROM doctor_treatments ORDER BY treatment_id,doctor_id'):
+            mapping.setdefault(row['treatment_id'], []).append(row['doctor_id'])
+        return mapping
 
     def state(self, session):
         rows = self.rows("SELECT state FROM sessions WHERE id=?", (session,))

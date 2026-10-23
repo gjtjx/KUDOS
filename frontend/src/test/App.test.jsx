@@ -33,6 +33,16 @@ test('suggested question submits Traditional Chinese',async()=>{
   const user=await mount();await user.click(screen.getByRole('button',{name:/我到醫院的流程/}));
   await screen.findByText(reply.reply);expect(chats()[0].message).toBe('我到醫院的流程');
 });
+
+test('patient doctor question shows relationship answer and preserves booking draft',async()=>{
+  api.mockImplementation(async(path)=>path==='/chat'?{...reply,intent:'patient_doctors',reply:'未指定主治醫生 / No assigned primary doctor',draft:{doctor_id:'D103',treatment_id:'T003'},sources:[{source:'patient_treatment_history.csv',id:'H9002'}],tool_trace:[{tool:'GET /api/patient-doctors',status:'ok'}]}:initial[path]);
+  const user=await mount();await send(user,'我的医生是？');
+  expect(await screen.findByText('未指定主治醫生 / No assigned primary doctor')).toBeInTheDocument();
+  expect(screen.getByText(/我的醫生 \/ My doctors ·/)).toBeInTheDocument();
+  expect(screen.getByText('patient_treatment_history.csv · H9002')).toBeInTheDocument();
+  expect(screen.getByText('醫生 / Doctor: D103')).toBeInTheDocument();
+  expect(screen.getByText('B1')).toBeInTheDocument();
+});
 test('empty or whitespace input cannot send',async()=>{
   const user=await mount();expect(screen.getByRole('button',{name:/傳送/})).toBeDisabled();
   await user.type(screen.getByRole('textbox'),'   ');fireEvent.submit(screen.getByRole('textbox').closest('form'));

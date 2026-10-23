@@ -1,5 +1,7 @@
 # 剩餘問題修復與完整複測 / Remaining fixes and complete retest
 
+> 歷史驗收：本頁保留當時版本結果；最新醫生關係及 100 題復診驗收見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。 / Historical revision evidence; see the latest review for current results.
+
 Date: **2026-10-23 (Asia/Shanghai)**. Baseline: `12c346d`; tested source includes the fixes published with this report. Model: **deepseek-flash**, Responses, automatic tool choice, non-strict tools. Application and harness files were kept fixed throughout the complete live suite. Unit-test fixture parsing and directory setup were adjusted separately, and the full unit suite was rerun.
 
 ## 結論 / Decision

@@ -50,7 +50,8 @@ def retrieve_grounded(db, query):
     for ident in ids: add(ident)
     for item in list(result.values()):
         if item['source']=='treatments.csv':
-            for ident in MATCHES[item['id']]: add(ident)
+            for row in db.rows('SELECT doctor_id FROM doctor_treatments WHERE treatment_id=? ORDER BY doctor_id', (item['id'],)):
+                add(row['doctor_id'])
     for item in list(result.values()):
         if item['source']=='doctors.csv': add(item['data']['clinic_id'])
     return list(result.values())

@@ -55,7 +55,8 @@ def visit_answer(bookings, catalog, booking_text):
     return text, sources
 
 
-def local_answer(query, sources, profile, catalog):
+def local_answer(query, sources, profile, catalog, mapping=None):
+    mapping = MATCHES if mapping is None else mapping
     q = normalize_input(query).lower()
     allergy = bool(re.search('allerg|peanut|过敏|花生',q))
     cancellation = bool(re.search('cancel|reschedule|改期|取消',q))
@@ -95,7 +96,7 @@ def local_answer(query, sources, profile, catalog):
             if key in row:
                 text += FIELD_LABELS.get(key,key)+': '+translated_value(ident,key,row[key])+'\n'
         if not fields and s['source']=='treatments.csv':
-            docs = [d for d in catalog['doctors'] if d['doctor_id'] in MATCHES[ident]]
+            docs = [d for d in catalog['doctors'] if d['doctor_id'] in mapping.get(ident, [])]
             text += '對應醫生 / Doctors: '+', '.join(d['full_name']+' ('+d['doctor_id']+')' for d in docs)+'\n'
         text += '['+s['source']+' · '+ident+']\n'
     return text.strip()

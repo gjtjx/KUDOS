@@ -6,7 +6,7 @@ import TranscriptSummary from './TranscriptSummary';
 import TracePanel from './TracePanel';
 const uuid=()=>crypto.randomUUID();
 const slotLabels={doctor_id:'醫生 / Doctor',treatment_id:'服務 / Treatment',booking_date:'日期 / Date',booking_time:'時間 / Time'};
-const intentLabels={visit_flow:'就診流程 / Visit guide',knowledge:'知識查詢 / Knowledge',bookings:'預約查詢 / Booking history',book:'建立預約 / New booking',cancel_draft:'取消草稿 / Cancel draft'};
+const intentLabels={visit_flow:'就診流程 / Visit guide',knowledge:'知識查詢 / Knowledge',bookings:'預約查詢 / Booking history',patient_doctors:'我的醫生 / My doctors',book:'建立預約 / New booking',cancel_draft:'取消草稿 / Cancel draft'};
 const suggestions=[
   ['我到醫院的流程','What should I expect when visiting the clinic?'],
   ['我有花生過敏，可以諮詢誰？','Who can I consult about my peanut allergy?'],

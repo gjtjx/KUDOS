@@ -23,6 +23,7 @@ Question → retrieval and recommendation → existing bookings → slot collect
 | 以 REST 或 MCP 查詢預約 / Tool-based booking queries | 選用 `GET /api/bookings`；ASGITransport 經正式 REST handler。 / Actual REST handlers selected from the permitted alternatives. |
 | 收集缺失參數並執行預約 / Collect slots and execute | 四欄完整且允許提交後呼叫 `POST /api/bookings`，交易保存及重試去重。 / Authorized complete drafts produce persistent, idempotent writes. |
 | 固定病人及個人化 / Fixed patient context | P001 的個資、過敏、病史與即時預約；拒絕其他病人 ID。 / Preloaded patient context and enforced scope. |
+| 患者與醫生關係 / Patient-doctor relations | 病歷／預約 JOIN 與唯讀工具區分歷史、下次及草稿醫生；不推定未提供的主治指定。 / Scoped relationship queries and a persisted doctor/service bridge. |
 | FastAPI 或 NestJS / Backend choice | FastAPI，自訂 Python Agent，模組分離。 / FastAPI with modular custom orchestration. |
 | 六份 CSV 初始化關聯資料庫 / Relational seed | SQLite 六張業務表、外鍵及缺失 ID 初始化。 / Relational schema and insert-if-missing seed. |
 | 請求驗證、SQL、錯誤處理 / Engineering standards | Pydantic、參數化 SQL、交易及明確錯誤回應。 / Validation, parameterized queries and transactional error handling. |

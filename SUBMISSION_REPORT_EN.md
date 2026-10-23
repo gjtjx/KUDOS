@@ -22,7 +22,7 @@ The workbench includes paired Traditional Chinese and English interface text, so
 | Existing appointment tool | GET /api/bookings through the actual FastAPI REST handlers |
 | New appointment execution | POST /api/bookings with validation, transaction and idempotency |
 | Fixed patient context | P001 profile, allergies, treatment history and current appointments |
-| Relational persistence | Six CSV-seeded business tables, plus state and reliability tables |
+| Relational persistence | Six CSV-seeded business tables, an explicit doctor/service bridge, plus state and reliability tables |
 | React workbench | Chat, retry, automatic/manual booking refresh and source display |
 | Optional transcript summary | Four-field JSON with verbatim evidence and null for unmentioned facts |
 | Optional observability | Persistent request/generation traces, timing, usage and error categories |
@@ -34,11 +34,13 @@ The project selects REST from the assignment's REST-or-MCP alternatives and impl
 
 The language model interprets intent, resolves references and extracts parameters. The application owns state, submission controls, validation and database writes.
 
-Each turn reads current bookings through REST and combines them with patient context and the small catalog. Knowledge questions are rewritten for exact-ID or lexical retrieval, then answered using selected evidence. Dense embeddings and a vector database are not implemented. The router currently sees the full small catalog; larger datasets would require candidate retrieval before routing.
+Each turn reads current bookings through REST and combines them with patient context and the small catalog. Knowledge questions are rewritten for exact-ID or lexical retrieval, then answered using selected evidence. Dense embeddings and a vector database are not implemented. Both routing and knowledge generation currently see the full small catalog in addition to selected evidence; larger datasets would require candidate retrieval before routing.
 
 Booking state persists doctor, treatment, date and time independently of bounded conversational history. Explicit withdrawals clear old fields. Interleaved questions preserve the draft. A request to wait creates a persistent hold, so complete information does not automatically override submission intent.
 
 REST tools use HTTPX ASGITransport against the same FastAPI application. They execute real request validation and database transactions within one process. The booking and its idempotency record are committed atomically. Chat response caching is a separate transaction; stable booking keys protect retries after a post-booking chat-save failure.
+
+Patient-doctor queries distinguish historical visits, the next appointment and the current draft; the dataset does not identify an assigned primary doctor. A database bridge supplies the same doctor/service compatibility links to retrieval and booking validation.
 
 Booking confirmation is based on the API result, not another model-generated success claim. Provider failures are explicit, with no silent fallback to local templates.
 
@@ -72,11 +74,11 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The latest October 23 revision passed **130 backend tests** (97.53% combined coverage), **525 complete-suite checks** across 64 scenarios and 83 turns, and **82 core acceptance checks**. The 525 checks comprise the original 376 plus 149 new response/state checks. All eight expected bookings were written, and the closing-turn draft stayed inactive. Previously discovered bilingual, negative-inference, eligibility and formatting defects did not recur in this run; see [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md). Frontend code was unchanged, so its prior 28-test/build result is retained. Earlier provider comparisons and failures remain historical.
+The October 23 review passed 152 backend tests (97.49% combined coverage), 29 frontend tests and a production build, 78 core live checks (without summaries), 123/124 current doctor-relationship checks (one format-related 502, retained; earlier 127/127), 525 checks across the full 64-scenario / 83-turn suite, and 701 checks across 100 read-only follow-up questions. The additional 100 doctor questions passed 700 checks and 60 research-based questions passed 480 checks. All eight intended bookings in the 64-scenario suite were saved; the 100-question suite created none.
 
-These checks cover fourteen chat turns, two transcript summaries, persistence, restart, deduplication, corrections and trace accounting. They are not 82 independent clinical cases or a general model benchmark. Earlier failures were retained and informed regression fixes, including an auxiliary-word retrieval match and over-cautious interpretation of selecting booking details.
+The original public checkout was installed using the README setup procedure. Local and live-provider browser demonstrations covered booking, persistence, held drafts, summaries and traces. See [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) for run IDs, retained transport failures and scope. Fact anchors and coverage do not establish general semantic or clinical accuracy. Cloud CI and container/cluster runtime remain unverified.
 
-[Test coverage and limits](VALIDATION.md) and [provider comparison and reproduction](MODEL_COMPARISON.md) contain the detailed results. No successful cloud CI or container/cluster runtime acceptance is claimed.
+
 
 ## 7. Scope and next steps
 

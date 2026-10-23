@@ -13,7 +13,7 @@
 >
 > 知識問答採用模型改寫查詢、ID 關聯查詢與 FTS5／BM25 檢索，回答附上來源。工程上加入兩層請求防重複、錯誤處理、逐字稿引文驗證和持久化模型追蹤。
 >
-> 目前有 130 項後端和 28 項前端測試通過，DeepSeek 本次完整流程通過 82 項檢查，完整 64 場景有 525 項檢查通過（含新增 149 項狀態與雙語檢查）；Sonnet 的 82 項為前一天的歷史結果。這是單一病人的作業原型；我能清楚區分已驗證能力和正式上線仍需補強的部分。
+> 最新關係查詢版本有 152 項後端和 29 項前端測試通過；先前患者醫生專項通過 127 項檢查；最新一次為 123/124，保留一筆雙語格式 502。另新增復診 100 題、醫生 100 題及指南擴展 60 題，數量和限制見最新驗收。先前完整 64 場景的 525 項為已保留的前版證據，最新完整複核以 SUBMISSION_CHECK 為準；Sonnet 的 82 項是 10 月 22 日歷史結果。這是單一病人的作業原型，我能區分已驗證能力和正式上線仍需補強的部分。
 
 **一句英文概述：**
 
@@ -51,6 +51,7 @@ backend/app/
   knowledge.py            FTS5/BM25、查詢擴展、ID 關聯查詢
   db.py                   建表、CSV 初始化、狀態與成功回覆保存
   answers.py              本機回答、一般就診導覽、預約排序
+  patient_doctors.py       歷史／下次／草稿醫生關係與唯讀回答
   localization.py         顯示翻譯與輸入正規化
   transcripts.py          四欄摘要、原文引句驗證
   observability.py        請求與模型呼叫追蹤
@@ -75,6 +76,8 @@ flowchart TD
     R --> K[knowledge：ID / FTS5 檢索]
     K --> A[模型依據證據回答]
     R --> Q[bookings：讀取實際預約]
+    R --> P[patient_doctors：查證醫生關係]
+    P --> O
     R --> D[book：合併草稿與提交意願]
     D --> M[缺欄位或暫緩：追問 / 等確認]
     D --> V[完整且允許提交：POST /api/bookings]
@@ -120,12 +123,15 @@ flowchart TD
 
 ### 5.1 模型輸出的是結構，不只是文字
 
-意圖包含 knowledge、visit_flow、bookings、book、cancel_draft。route_intent 另輸出 search_query、四個預約欄位、booking_action 和 clear_slots。
+意圖包含 knowledge、visit_flow、bookings、patient_doctors、book、cancel_draft。route_intent 另輸出 search_query、doctor_scope、四個預約欄位、booking_action、clear_slots 與授權原文引句。患者醫生問題按主治指定、歷史就診、下次預約或草稿選擇區分，由關係查詢產生答案，不讓模型把不同關係混淆。詳細關係圖見 [TECH_DOC](TECH_DOC.md)。
 
 ```json
 {
   "intent": "book",
+  "doctor_scope": null,
   "search_query": null,
+  "authorization_quote": "預約 D103 的 T003",
+  "hold_quote": "先不要提交",
   "booking_action": "hold",
   "clear_slots": [],
   "doctor_id": "D103",
@@ -370,7 +376,7 @@ knowledge 和 visit_flow 分支不清除草稿；下一輪仍提供草稿和歷�
 原題允許 REST 或 MCP，REST 足以展示工具調用、驗證與持久化。若工具要提供給多種 Agent 客戶端，再評估 MCP；不是為了名詞增加一層。
 
 ### Q14：推薦的醫生真的能做那項服務嗎？
-原資料沒有醫生服務關聯表，現以 MATCHES 顯式映射。這是已公開的假設；正式系統應由可維護的關聯表和排班服務提供。
+原資料沒有醫生服務關聯表，目前以 MATCHES 的示範假設初始化具外鍵的 doctor_treatments；檢索、路由與預約校驗再讀取此表。這不代表已驗證醫生排班，正式系統仍需可靠的服務配置及排班資料。
 
 ### Q15：如何處理時段衝突？
 題目假設時段可用，目前沒有衝突檢查。正式系統需要交易內的排班檢查或唯一約束及資源預留，不能只在模型提示中要求避免衝突。

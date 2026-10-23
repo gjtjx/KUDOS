@@ -32,6 +32,7 @@ Each turn reads current bookings through REST. ASGITransport dispatches through 
 | [main.py](backend/app/main.py) | API、錯誤處理、交易與前端服務 / API, errors, transactions, static serving |
 | [generation.py](backend/app/generation.py)、[conversation.py](backend/app/conversation.py) | 雙語結構校驗、有限修復、結束語狀態保護及合資格選項 / Validated bilingual generation and conversation invariants |
 | [agent.py](backend/app/agent.py) | 路由、上下文、草稿與工具編排 / Routing, context, drafts, tools |
+| [patient_doctors.py](backend/app/patient_doctors.py) | 區分主治指定缺失、歷史／下次／草稿醫生 / Verified relationship facts and scoped identity answers |
 | [knowledge.py](backend/app/knowledge.py) | ID 關聯查詢、FTS5/BM25 / Catalog retrieval |
 | [llm.py](backend/app/llm.py) | Responses / Chat Completions、相容設定及安全錯誤 / Provider adapter |
 | [db.py](backend/app/db.py)、[models.py](backend/app/models.py) | 持久化、初始化及輸入驗證 / Persistence, seed, input validation |
@@ -51,13 +52,14 @@ Local mode is an explicit deterministic demo, not an automatic fallback for prov
 | `knowledge` | 檢索並回答，包括特定服務準備事項；保留草稿 / Retrieve and answer without clearing the draft |
 | `visit_flow` | 一般就診導覽；未提供的院內規定標為未知 / General visit guidance with explicit information gaps |
 | `bookings` | 使用 REST 取得的即時預約 / Answer from current booking records |
+| `patient_doctors` | 依 doctor_scope 查患者醫生關係，不列出整份預約 / Scoped patient-doctor identity, not a full booking dump |
 | `book` | 合併選擇、追問缺失欄位或提交 / Merge, clarify or execute |
 | `cancel_draft` | 清除未提交草稿；不修改已確認預約 / Discard only the pending draft |
 
 Session 綁定 P001，保存 `active`、`draft`、`booking_hold` 和最多 20 則歷史訊息；模型使用最近 12 則歷史訊息。這是訊息數，不是問答輪數；結構化草稿可保留更早的選擇。
 Sessions retain bounded history and structured booking state, not unlimited conversational memory. After actual model routing, narrowly matched pure closing messages preserve booking state; mixed closing/new instructions are not intercepted. Missing-field service options exclude adult-ineligible T002, matching the existing API rule.
 
-`route_intent` 輸出意圖、`search_query`、四欄位、`clear_slots`、`booking_action`，以及可回溯使用者原文的 `authorization_quote`／`hold_quote`。主機驗證引文來源；具授權依據的完整、未暫緩草稿可修正誤判的 collect；既有 hold 不會因此解除。主機依序處理：
+`route_intent` 輸出意圖、`search_query`、`doctor_scope`、四欄位、`clear_slots`、`booking_action`，以及可回溯使用者原文的 `authorization_quote`／`hold_quote`。主機驗證引文來源；具授權依據的完整、未暫緩草稿可修正誤判的 collect；既有 hold 不會因此解除。主機依序處理：
 The host processes the routing result in this order:
 
 1. 清除明確撤回的欄位；null／未提及不刪舊值。 / Clear explicitly withdrawn fields; absent/null values preserve selections.
@@ -91,6 +93,7 @@ The lexical baseline favors simplicity; hybrid retrieval remains a proposal requ
 | `clinics`、`doctors`、`treatments` | 診所、醫生、服務目錄 / Catalog |
 | `patients`、`patient_treatment_history` | 病人與就診歷史 / Patient context |
 | `patient_bookings` | 原始及新建預約，關聯病人、醫生與療程 / Persistent appointments |
+| `doctor_treatments` | 醫生與服務的多對多關聯；複合主鍵及兩個外鍵 / Doctor/service bridge used by retrieval and booking validation |
 | `sessions` | 草稿、歷史及暫緩狀態 / Conversation state |
 | `requests` | 成功聊天回覆快取 / Successful chat response cache |
 | `booking_keys` | 預約請求去重 / Booking idempotency |
@@ -99,6 +102,29 @@ The lexical baseline favors simplicity; hybrid retrieval remains a proposal requ
 
 每條連線啟用外鍵；輸入值使用參數化 SQL。六份 CSV 以 `INSERT OR IGNORE` 初始化：修改 CSV 不會更新既有 ID，新增預約也不回寫 CSV。FTS 索引啟動時由資料庫目錄重建。
 Seeding inserts missing IDs rather than migrating existing rows. See [MAINTENANCE](MAINTENANCE.md) for safe updates and backup.
+
+### 資料關係與患者醫生查詢 / Relationships and patient-doctor queries
+
+```mermaid
+erDiagram
+    clinics ||--o{ doctors : hosts
+    doctors ||--o{ doctor_treatments : provides
+    treatments ||--o{ doctor_treatments : offered_by
+    patients ||--o{ patient_bookings : books
+    doctors ||--o{ patient_bookings : sees
+    treatments ||--o{ patient_bookings : selected_service
+    patients ||--o{ patient_treatment_history : has_history
+    doctors ||--o{ patient_treatment_history : treated_by
+```
+
+原六份 CSV 沒有醫生／服務關聯表。`doctor_treatments` 為空時，以既有示範假設初始化六筆關聯；之後保留資料庫維護的非空關聯，不在每次啟動覆寫。`MATCHES` 僅是初始化預設值。檢索擴充、路由映射與預約校驗讀取同一關聯表。
+The source CSVs omit the compatibility bridge. Six documented demo links seed an empty bridge; subsequent nonempty mappings remain database-maintained. Retrieval, routing context and booking validation read that table.
+
+`db.profile()` 以 SQL JOIN 把 P001 病歷連到醫生及診所；預約經正式 REST 查詢連到醫生、服務與診所。`GET /api/patient-doctors` 回傳最近病歷醫生與依診所時區排序的下一次未來已確認預約。沒有主治指定欄位，因此 `primary_assignment` 為 null（表示資料未提供，而非證明患者沒有主治醫生）。草稿醫生只代表會話選擇，不寫成患者醫生歸屬。
+SQL joins connect patient history to doctors and clinics. The read-only relationship API distinguishes recorded history from the next confirmed appointment. Null assignment means unrecorded, not proof that no primary doctor exists; a draft selection is not an assignment.
+
+LLM 路由新增 `patient_doctors` 與 `doctor_scope`（primary、overview、history、next、draft）；其回答由已查證關係產生，避免再次生成把不同關係混為一談。模型仍先執行；狹義獨立問句另有唯讀保護，避免錯分為查整份預約或寫入。混合問句與其他醫生屬性問題仍交由路由處理；不宣稱涵蓋所有語句。
+The model classifies relationship questions and their scope. Verified facts are rendered by the host; narrow standalone-question guards run after routing and preserve drafts. Mixed requests and attribute questions still use model routing.
 
 ## 5. 交易與重試 / Transactions and retries
 

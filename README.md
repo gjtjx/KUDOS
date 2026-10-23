@@ -97,7 +97,7 @@ On macOS/Linux, substitute `python3`, `.venv/bin/python` and `npm`; those platfo
 | 模式 / Mode | 行為 / Behavior |
 |---|---|
 | `AI_MODE=local` | 決定性的關鍵詞檢索、雙語意圖／欄位規則與模板回覆，適合免密鑰示範。 / Deterministic retrieval, bilingual routing/slot rules and templated answers for a key-free demo. |
-| `AI_MODE=llm` | 每則新訊息由真實模型辨識意圖、抽取欄位及生成有依據的回答；預約結果由 REST 回傳決定。 / Live model routing, extraction and grounded responses; REST results determine booking outcomes. |
+| `AI_MODE=llm` | 每則新訊息由真實模型辨識意圖、抽取欄位；知識與就診導覽由模型依證據回答。醫生關係、預約查詢、草稿及寫入結果由主機依資料產生。 / Live routing and extraction; knowledge and visit guidance use grounded generation. Patient-doctor relationships, booking queries, drafts and confirmations are rendered from authoritative application data. |
 
 兩種模式共用預約 API 與資料庫。模型失敗會明確回報，不會悄悄改用本機模板。 / Both modes share booking APIs and storage. Provider failures are explicit, with no silent local fallback.
 
@@ -159,6 +159,8 @@ flowchart TD
 3. **寫入 / Booking:** REST 驗證醫生、服務相容性及診所當地日期時間；交易與冪等鍵避免相同請求重複建立預約。 / REST validation and transactional idempotency protect booking writes. Success messages come from saved results.
 4. **摘要與追蹤 / Summary and tracing:** 摘要驗證四欄結構及原文引句；本機追蹤保存模型呼叫中繼資料。 / Summary output is checked against transcript evidence; local traces retain call metadata.
 
+**患者與醫生關係 / Patient-doctor relationships:** `GET /api/patient-doctors` 區分歷史就診、下一次已確認預約與未提交草稿選擇；原資料未指定主治醫生，不作推定。醫生／服務由具外鍵的 `doctor_treatments` 關聯表提供，檢索與預約校驗共用。 / A read-only relationship tool distinguishes past, next and draft doctors without inventing a primary-doctor assignment. Retrieval and booking validation share the database compatibility bridge. See the relationship diagram in [TECH_DOC.md](TECH_DOC.md).
+
 小型目錄目前完整提供給意圖路由與知識回答模型，回答另使用選定證據；資料量擴大時需先檢索候選。架構與取捨詳見 [TECH_DOC.md](TECH_DOC.md)。 / Routing and knowledge generation currently receive the small catalog in full; larger catalogs would require candidate retrieval before routing.
 
 <a id="demo"></a>
@@ -184,27 +186,24 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 <a id="testing"></a>
 ## 測試與驗證 / Testing
 
-**2026-10-23 剩餘問題已修復，完整回歸通過。** 本輪涵蓋 64 場景、83 輪真實對話；歷史乾淨安裝與瀏覽器演示見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
-**Remaining fixes and full retest passed on October 23, 2026**; see [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md) for the tested scope and retained historical evidence.
-
-**完整複測：525/525 項檢查通過**，包括原有 376 項及新增 149 項狀態／雙語／格式／資格檢查；8 筆預期預約全部寫入。結束語誤開草稿、語言過度否定、英文缺失及不合資格選項在本輪未復發。 / All 64 scenarios passed the strengthened checks; [the report](REMAINING_FIXES_REPORT.md) separates mechanical checks from human content review and states the limits.
+**2026-10-23 最新複核：醫生關係查詢與復診問題測試。** 乾淨安裝、瀏覽器演示、完整回歸與失敗紀錄見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
+**Latest review:** patient-doctor relationships and 100 data-grounded follow-up questions; see the linked report for evidence and limits.
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合測試 / Backend tests | 130 passed |
-| 前端單元／元件測試 / Frontend tests | 28 passed |
-| 前端正式建置 / Production build | Passed |
-| DeepSeek 完整流程 / Live core acceptance | 82/82 checks, 2026-10-23 |
-| DeepSeek 修復定向驗證 / Targeted fix regression | 112/112 checks, 11 scenarios / 20 turns, 2026-10-23 |
-| 常見問法 / Common questions | 20 replies reviewed; 84/84 mechanical checks; two minor wording observations in the review report |
-| 修復說明 / Fix validation | [Changes and retest](FIX_VALIDATION.md) |
-| 完整修復後複測 / Full retest | [64 scenarios / 83 turns](REMAINING_FIXES_REPORT.md); 525/525 checks: 376 original + 149 added |
-| 最新修復 / Latest fixes | [Changes, full inventory and evidence](REMAINING_FIXES_REPORT.md) |
-| 修復前歷史 / Pre-fix history | [Original failures](DIVERSE_QUESTIONS_REPORT.md) retained |
-| Poe Sonnet 歷史對照 / Historical Sonnet acceptance | 82/82 checks, 2026-10-22; 本次未重跑 / not rerun in this review |
+| 後端單元／整合 / Backend tests | 152 passed; 97.49% combined line/branch coverage |
+| 前端單元／元件 / Frontend tests | 29 passed; production build passed |
+| DeepSeek 核心 / Live core acceptance | Latest: 78/78 checks without summary flag; earlier 82/82 includes summaries |
+| 患者醫生關係 / Patient-doctor relationships | Latest: 123/124 checks; one invalid-bilingual-answer 502 retained. Earlier: 127/127 |
+| 完整回歸 / Full regression | 64 scenarios / 83 turns / 525 checks passed; all 8 expected writes |
+| 復診常見問題 / Follow-up questions | 100 questions / 701 checks passed; zero booking writes |
+| 醫生資訊 / Doctor information | 100 questions / 700 checks passed; zero writes |
+| 指南擴展 / Research-based follow-up | 60 questions / 480 checks passed; source and limits below |
+| 部署設定 / Deployment configuration | 2 Compose variants / 5 Kubernetes resources checked offline |
+| 容器、叢集與雲端 CI / Runtime and cloud CI | Not verified |
 
-本次發現並修正本機詞彙檢索噪聲及模型對「確認醫生／服務」的過度暫緩；中間失敗報告保留。這是有限案例驗收，不是通用模型排名。雲端 CI 與容器／叢集執行仍未驗收。
-The review found and corrected lexical noise and an over-cautious routing interpretation. Failed runs are retained; runtime deployment and cloud CI remain unverified.
+測試檢查真實模型路由、資料依據、既有資料與寫入行為。關鍵事實字串檢查不代表全面語義或臨床正確率。較早一次完整測試遇到兩次供應商連線錯誤；已保留失敗與後續驗證，未加入隱藏重試。
+Fact-anchor and state checks are bounded acceptance, not a clinical or general language benchmark. Earlier transport failures remain recorded.
 
 重跑命令、覆蓋率及測試對照見 [VALIDATION.md](VALIDATION.md)。真實供應商測試見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)，會消耗 API 額度。 / Use the linked guides to reproduce local and paid live tests.
 
@@ -232,6 +231,7 @@ Docker Compose and Kubernetes manifests include persistent storage, probes, non-
 | `GET /api/health` | 模式與服務狀態 / Mode and service status |
 | `GET /api/live`, `GET /api/ready` | 程序／資料庫探針 / Process and database probes |
 | `GET /api/profile` | P001 個人資料與病史 / Mock patient profile and history |
+| `GET /api/patient-doctors` | 患者與醫生的已查證關係；不推定主治醫生 / Verified patient-doctor relationships, without inferred assignment |
 | `GET /api/catalog` | 診所、醫生與療程 / Clinics, doctors and treatments |
 | `GET /api/bookings?patient_id=P001` | 查詢預約 / Read appointments |
 | `POST /api/chat` | 多輪對話 / Conversation turn |
@@ -248,6 +248,7 @@ backend/app/
   main.py              API, transactions and frontend serving
   agent.py             Intent routing, booking state and REST tools
   knowledge.py         Catalog indexing and FTS5/BM25 retrieval
+  patient_doctors.py    Patient-doctor relationships and read-only identity answers
   llm.py               Provider transport and compatibility
   db.py                Schema, CSV seeding and persistence
   models.py            Request validation
@@ -273,7 +274,7 @@ compose.llm.yaml       LLM deployment override
 | [TECH_DOC.md](TECH_DOC.md) | 理解架構、設計取捨與假設。 / Architecture, tradeoffs and assumptions. |
 | [REQUIREMENTS_REVIEW.md](REQUIREMENTS_REVIEW.md) | 對照原始作業要求與完成範圍。 / Requirement-by-requirement implementation status. |
 | [VALIDATION.md](VALIDATION.md) | 查看測試、覆蓋率與驗收限制。 / Tests, coverage and acceptance limits. |
-| [MODEL_COMPARISON.md](MODEL_COMPARISON.md) | 查看最新 DeepSeek／Sonnet 對照及重跑方式。 / Latest provider comparison and reproduction commands. |
+| [MODEL_COMPARISON.md](MODEL_COMPARISON.md) | 查看有日期的 DeepSeek／Sonnet 對照及重跑方式。 / Dated provider comparison and reproduction commands. |
 | [MAINTENANCE.md](MAINTENANCE.md) | 維護、備份、還原及排錯。 / Maintenance, backup, restore and troubleshooting. |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Docker／Kubernetes 設定與操作。 / Container and Kubernetes setup. |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | 追蹤欄位、保留策略與隱私範圍。 / Trace fields, retention and privacy scope. |
