@@ -157,7 +157,8 @@ class AppTests(unittest.TestCase):
         route = {"tool_calls":[{"function":{"name":"route_intent","arguments":json.dumps({"intent":"knowledge"})}}]}
         with patch.object(self.app.state.agent, "llm", AsyncMock(side_effect=[route, {"content":json.dumps({'paragraphs':[{'zh':'診所資訊','en':'Clinic information'}]})}])) as model:
             self.chat("診所營業時間")
-            self.assertIn("paired Traditional Chinese", model.call_args_list[1].args[0][0]["content"])
+            self.assertIn("bilingual JSON object", model.call_args_list[1].args[0][0]["content"])
+            self.assertIn("Do not output rendered plain text", model.call_args_list[1].args[0][0]["content"])
 
     def test_llm_failure_never_reports_success(self):
         self.app.state.agent.mode="llm"

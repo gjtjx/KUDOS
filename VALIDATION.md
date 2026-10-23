@@ -1,27 +1,27 @@
 # 測試與驗收 / Validation
 
 **最新提交複核 / Latest submission review: 2026-10-23.**
-最新結果涵蓋患者醫生關係、共享醫生服務關聯表與 100 個復診常見問題。完整證據與限制見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。歷史模型比較不與本次數量相加。
-The latest code distinguishes doctor relationships and shares the compatibility table across retrieval and booking validation.
+本頁最新結果對應雙語格式 502 修復；完整原理、重現與歷史失敗見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
+Current results cover the JSON-prompt conflict and negated-inference validator fix.
 
 ## 1. 最新結果 / Latest recorded results
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合 / Backend tests | 152 passed; 97.49% combined line/branch coverage |
-| 前端單元／元件 / Frontend tests | 29 passed; production build passed |
-| DeepSeek 核心 / Live core acceptance | Latest: 78/78 checks without summary flag; earlier 82/82 includes summaries |
-| 患者醫生關係 / Patient-doctor relationships | Latest: 123/124 checks; one invalid-bilingual-answer 502 retained. Earlier: 127/127 |
-| 完整回歸 / Full regression | 64 scenarios / 83 turns / 525 checks passed; all 8 expected writes |
-| 復診常見問題 / Follow-up questions | 100 questions / 701 checks passed; zero booking writes |
-| 醫生資訊 / Doctor information | 100 questions / 700 checks passed; zero writes |
-| 指南擴展 / Research-based follow-up | 60 questions / 480 checks passed; source and limits below |
+| 後端單元／整合 / Backend | 157 passed; 97.50% combined line/branch coverage |
+| 前端元件／單元 / Frontend | 29 passed; production build passed |
+| 真實核心流程與摘要 / Live core and summaries | 82/82 checks |
+| 患者醫生關係 / Patient-doctor relationships | 10 scenarios / 14 turns / 127 checks passed |
+| 原失敗問法重複 / Original failing conversation | 6 repetitions / 12 turns / 96 checks passed |
+| 完整場景 / Full regression | 64 scenarios / 83 turns / 525 checks passed |
+| 復診問題 / Follow-up questions | 100 questions / 701 checks passed |
+| 醫生資訊 / Doctor information | 100 questions / 700 checks passed |
+| 指南擴展 / Research-based questions | 60 questions / 480 checks passed |
 | 部署設定 / Deployment configuration | 2 Compose variants / 5 Kubernetes resources checked offline |
-| 容器、叢集與雲端 CI / Runtime and cloud CI | Not verified |
+| 雲端 CI、容器與叢集執行 / Cloud CI and runtime | Not verified |
 
-本機測試合計 181 項（152 後端 + 29 前端），前後端均於本輪重跑。前端 statements 99.23%、branches 93.83%、lines/functions 100%。測試覆蓋率不是模型或臨床正確率。
-All local tests and the frontend build were rerun. Coverage describes executed code paths.
-
+本機共 186 項測試（157 後端 + 29 前端），本輪全部重跑。前端 statements 99.23%、branches 93.83%、lines/functions 100%。測試覆蓋率不是模型正確率。
+All local tests and the production build were rerun; coverage measures executed code paths.
 
 
 ## 2. 測試分層與責任 / Test layers and coverage
@@ -29,6 +29,7 @@ All local tests and the frontend build were rerun. Coverage describes executed c
 | 層次 / Layer | 位置 / Location | 涵蓋範圍 / Coverage |
 |---|---|---|
 | 患者醫生關係 / Doctor relationships | [test_patient_doctors.py](backend/tests/test_patient_doctors.py) | Relationship scope, privacy, draft preservation, bridge integrity and shared validation |
+| 否定推斷與修復 / Negation and repair | [test_bilingual_negation.py](backend/tests/test_bilingual_negation.py) | Valid cautions, real negative assertions, contrast/punctuation boundaries and one bounded repair |
 | 最新狀態／雙語回歸 / State and bilingual regressions | [test_remaining_regressions.py](backend/tests/test_remaining_regressions.py) | Closing invariants, eligibility, negative inference, bounded bilingual repair and contextual characters |
 | 回答修復 / Answer regressions | [test_answer_regressions.py](backend/tests/test_answer_regressions.py) | Authorization provenance, held drafts, authoritative lookup, catalog scope, formatting and verbatim evidence |
 | 核心單元 / Core units | [test_units.py](backend/tests/test_units.py) | 路由、欄位、回答、翻譯、檢索與驗證 / Routing, slots, answers, localization, retrieval |
@@ -95,6 +96,6 @@ Historical counts describe different revisions and suites, not extra current cov
 - 廣泛自然語言品質、臨床正確性、完整提示注入防護。 / Comprehensive language, clinical and security quality.
 - Docker／Kubernetes runtime、其他作業系統、多 worker、負載及完整 DST 歧義。 / Container runtime, cross-platform, distributed/load and DST behavior.
 - GPT-6 Astra High 沒有獨立 API 對跑，沒有其延遲、Token 或得分。 / The Codex-selected model was not independently benchmarked.
-- [先前 GitHub Actions run](https://github.com/gjtjx/KUDOS/actions/runs/39775522266) 因帳號帳單限制未執行；本次重新查詢仍只有該失敗 run，沒有最新提交成功紀錄；未查帳單狀態。 / An earlier run was blocked; the run listing still contains only that failed run; billing eligibility was not inspected.
+- [先前 GitHub Actions run](https://github.com/gjtjx/KUDOS/actions/runs/39775522266) 因帳號帳單限制未執行；較早複核未發現成功紀錄；本次不宣稱雲端 CI 成功，也未查帳單狀態。 / An earlier run was blocked; the earlier review had no successful run; no current cloud-CI success or billing eligibility is asserted.
 
 部署驗收程序見 [DEPLOYMENT](DEPLOYMENT.md)，失敗排查見 [MAINTENANCE](MAINTENANCE.md)。

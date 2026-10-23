@@ -186,24 +186,25 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 <a id="testing"></a>
 ## 測試與驗證 / Testing
 
-**2026-10-23 最新複核：醫生關係查詢與復診問題測試。** 乾淨安裝、瀏覽器演示、完整回歸與失敗紀錄見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
-**Latest review:** patient-doctor relationships and 100 data-grounded follow-up questions; see the linked report for evidence and limits.
+**2026-10-23 雙語 502 修復後完整複測通過。** 統一內部 JSON 輸出提示，修正否定推斷誤判；仍保留一次修復上限與錯誤拒絕。詳見 [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md)。
+**Full post-fix retest passed:** conflicting output instructions and a false rejection of a negated language inference were corrected. Invalid output still fails explicitly after one repair.
 
 | 驗證 / Validation | 結果 / Result |
 |---|---|
-| 後端單元／整合 / Backend tests | 152 passed; 97.49% combined line/branch coverage |
-| 前端單元／元件 / Frontend tests | 29 passed; production build passed |
-| DeepSeek 核心 / Live core acceptance | Latest: 78/78 checks without summary flag; earlier 82/82 includes summaries |
-| 患者醫生關係 / Patient-doctor relationships | Latest: 123/124 checks; one invalid-bilingual-answer 502 retained. Earlier: 127/127 |
-| 完整回歸 / Full regression | 64 scenarios / 83 turns / 525 checks passed; all 8 expected writes |
-| 復診常見問題 / Follow-up questions | 100 questions / 701 checks passed; zero booking writes |
-| 醫生資訊 / Doctor information | 100 questions / 700 checks passed; zero writes |
-| 指南擴展 / Research-based follow-up | 60 questions / 480 checks passed; source and limits below |
+| 後端單元／整合 / Backend | 157 passed; 97.50% combined line/branch coverage |
+| 前端元件／單元 / Frontend | 29 passed; production build passed |
+| 真實核心流程與摘要 / Live core and summaries | 82/82 checks |
+| 患者醫生關係 / Patient-doctor relationships | 10 scenarios / 14 turns / 127 checks passed |
+| 原失敗問法重複 / Original failing conversation | 6 repetitions / 12 turns / 96 checks passed |
+| 完整場景 / Full regression | 64 scenarios / 83 turns / 525 checks passed |
+| 復診問題 / Follow-up questions | 100 questions / 701 checks passed |
+| 醫生資訊 / Doctor information | 100 questions / 700 checks passed |
+| 指南擴展 / Research-based questions | 60 questions / 480 checks passed |
 | 部署設定 / Deployment configuration | 2 Compose variants / 5 Kubernetes resources checked offline |
-| 容器、叢集與雲端 CI / Runtime and cloud CI | Not verified |
+| 雲端 CI、容器與叢集執行 / Cloud CI and runtime | Not verified |
 
-測試檢查真實模型路由、資料依據、既有資料與寫入行為。關鍵事實字串檢查不代表全面語義或臨床正確率。較早一次完整測試遇到兩次供應商連線錯誤；已保留失敗與後續驗證，未加入隱藏重試。
-Fact-anchor and state checks are bounded acceptance, not a clinical or general language benchmark. Earlier transport failures remain recorded.
+本次完整重跑 64 場景、260 個擴展問題、核心預約與摘要、醫生關係，另重複原失敗對話六次。真實供應商為 DeepSeek `deepseek-flash`；測試對話／檢查數不是一般語言或臨床正確率。較早的格式及連線失敗原報告仍保留。
+The listed live suites were rerun against the corrected code. Earlier failures remain evidence; no universal provider-reliability or clinical claim is made.
 
 重跑命令、覆蓋率及測試對照見 [VALIDATION.md](VALIDATION.md)。真實供應商測試見 [MODEL_COMPARISON.md](MODEL_COMPARISON.md)，會消耗 API 額度。 / Use the linked guides to reproduce local and paid live tests.
 

@@ -79,6 +79,9 @@ Invalid routing structure allows one bounded retry before side effects. Host val
 - 回答模型根據檢索內容生成；病史與預約另外注入，不進通用知識索引。 / Patient context is separate from the general knowledge index.
 
 目前沒有 embedding、向量資料庫或 reranker。路由與知識回答均看到完整小型目錄；回答另外使用選定證據，避免把局部檢索缺失當作整份目錄缺失。大資料量應先取候選並標明檢索範圍。來源標籤不等於每句生成內容已自動驗真。
+本輪修正內部輸出契約：模型只輸出 zh/en 段落 JSON，後端負責顯示文字，不再同時要求直接輸出文字。語言能力校驗區分「她不會說」與「這不代表她不會說」；只豁免明確否定推斷，不跨標點或轉折，仍拒絕另一句無根據的否定。最多一次修復，沒有本機答案降級。
+The output contract consistently requires JSON. Language validation exempts narrowly matched negated inferences, while independent or contrasting unsupported inability claims remain rejected. The one-repair limit and explicit failure remain unchanged.
+
 Knowledge and visit replies are generated as internal JSON zh/en paragraph pairs, validated for both languages, catalog-name/word usage and the observed unsafe negative-language/approval patterns, then rendered as text. One bounded repair is allowed; a second invalid result returns an explicit provider error. These checks do not prove translation equivalence or general semantic truth.
 
 No dense retrieval is implemented. Full-catalog context is a scaling limitation, and citations are not sentence-level fact verification. Booking lookup, missing-field prompts and saved/rejected confirmations use authoritative backend text after real model routing; knowledge and visit guidance retain model generation.

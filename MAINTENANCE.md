@@ -114,4 +114,7 @@ Live regressions require matching credentials and preserved failure evidence.
 
 ## 雙語生成校驗 / Bilingual generation validation
 
+已重現的根因：互相衝突的文字／JSON 提示，加上把「不代表她不能說其他語言」當作能力否定的校驗誤報。檢查內部 JSON 契約與否定作用範圍，重跑 `test_bilingual_negation.py`；不要關閉校驗或無限重試。
+The corrected incident involved conflicting output instructions and negation scope. Reproduce with the bounded regression tests rather than disabling validation or retrying indefinitely.
+
 `invalid_bilingual_answer` means the provider failed the internal paragraph/language checks after one repair. Verify the configured provider/model, preserve the failed isolated report and reproduce with the scenario ID. Do not bypass validation or paste credentials into logs. The public reply remains text; no frontend migration is needed. See [REMAINING_FIXES_REPORT.md](REMAINING_FIXES_REPORT.md).

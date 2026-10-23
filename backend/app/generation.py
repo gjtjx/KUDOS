@@ -9,6 +9,14 @@ def answer_payload(zh, en):
     return {'paragraphs': [{'zh': zh, 'en': en}]}
 
 
+def unsupported_language_claim(text):
+    # Only explicit negation with a pronoun/doctor subject is exempted.
+    # Punctuation and contrast cannot bridge into a separate negative assertion.
+    text = re.sub(r"\b(?:does not|doesn't|do not|don't) (?:mean|imply|prove|show|establish) (?:that )?(?:she|he|they|the doctor) (?:cannot|can't|does not|doesn't|only) speaks?\b", '', text, flags=re.I)
+    text = re.sub(r'不(?:代表|表示|意味著)(?:她|他|醫生|該醫生)?不(?:會|能)(?:說|講)', '', text)
+    return bool(re.search(r"(?:does not|doesn't|cannot|can't|only)\s+speak|只會(?:說|講)|不(?:會|能)(?:說|講)", text, re.I))
+
+
 def validate_answer(content, catalog, on_hold=False, allowed_literals=()):
     try:
         data = json.loads(content)
@@ -43,7 +51,7 @@ def validate_answer(content, catalog, on_hold=False, allowed_literals=()):
         residue = re.sub(r'\b[BCDTPH]\d+\b|\b(?:clinics|doctors|treatments)\.csv\b', '', residue)
         if re.search(r'[A-Za-z]{3}', residue):
             raise ValueError('untranslated_word_in_chinese')
-        if re.search(r"(?:does not|doesn't|cannot|can't|only)\s+speak|只會(?:說|講)|不(?:會|能)(?:說|講)", zh + '\n' + en, re.I):
+        if unsupported_language_claim(zh + '\n' + en):
             raise ValueError('unsupported_negative_language_claim')
         if not on_hold and (re.search(r'(?:draft|booking|appointment).{0,80}(?:require|need|must).{0,60}(?:confirm|approv)', en, re.I) or re.search(r'(?:需|必須|等待).{0,14}(?:確認|批准).{0,10}(?:提交|送出)', zh)):
             raise ValueError('invented_confirmation_requirement')

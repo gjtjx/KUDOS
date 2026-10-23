@@ -125,7 +125,7 @@ GROUPS = [
         ('把 B1004 改期，不要另建一筆。', 'not|cannot|無法|不支援|不能'),
         ('只推薦膝蓋復診服務，先不要預約。', 'T005|Joint'),
         ('皮疹可以找哪位醫生？不要建立預約。', 'Elena|D103'),
-        ('謝謝，暫時不用安排預約。', 'thank|welcome|thanks|謝'),
+        ('謝謝，暫時不用安排預約。', None),
     ]),
 ]
 ITEMS = [(f'f{i:03d}_{group}', question, pattern)
@@ -138,7 +138,10 @@ PATTERNS = {name: pattern for name, _, pattern in ITEMS}
 
 def review_response(name, message, result, app):
     reply = result['reply']
-    yield 'expected_record_anchor', bool(re.search(PATTERNS[name], reply, re.I | re.S))
+    if name == 'f100_boundaries':
+        yield 'decline_preserves_empty_draft', result['intent'] != 'book' and result['draft'] == {} and result.get('booking') is None
+    else:
+        yield 'expected_record_anchor', bool(re.search(PATTERNS[name], reply, re.I | re.S))
     yield 'no_other_patient_records', not re.search(r'H9001|B1002|B1003|Robert Johnson|Alice Smith', reply)
     yield 'no_display_artifacts', not re.search(r'\\n|<br\s*/?>', reply, re.I)
     if name == 'f100_boundaries':

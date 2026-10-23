@@ -287,8 +287,8 @@ class Agent:
         # Saved/rejected booking confirmations remain authoritative API results.
         if self.mode == "llm" and not closing and not foreign_patients and intent in ("knowledge", "visit_flow"):
             reply = await generate_answer(self.llm, [{"role":"system", "content":
-                "You are a clinic service assistant. Always answer with paired Traditional Chinese (zh-Hant) and English, Traditional Chinese first and English immediately following each paragraph. Never use Simplified Chinese. "
-                "Write the paired text directly, without language labels, invented city prefixes or repeated source lines. "
+                "You are a clinic service assistant. Return only the bilingual JSON object required below: paragraphs containing Traditional Chinese zh and its full English en counterpart. Never use Simplified Chinese. The application renders these fields as paired text. "
+                "Do not output rendered plain text, language labels, invented city prefixes or repeated source lines. "
                 "Use literal newlines, never escaped newline text or HTML tags. Preserve doctor full_name exactly as stored; never translate or invent a Chinese personal name. "
                 "Answer the actual question concisely, without dumping database fields or unrelated allergies. "
                 "Use plain text without Markdown bold markers. Usually use at most three short paired paragraphs; visit journeys can use four short steps and booking history may list all rows. "

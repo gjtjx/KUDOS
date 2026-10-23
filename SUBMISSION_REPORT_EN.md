@@ -74,10 +74,11 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The October 23 review passed 152 backend tests (97.49% combined coverage), 29 frontend tests and a production build, 78 core live checks (without summaries), 123/124 current doctor-relationship checks (one format-related 502, retained; earlier 127/127), 525 checks across the full 64-scenario / 83-turn suite, and 701 checks across 100 read-only follow-up questions. The additional 100 doctor questions passed 700 checks and 60 research-based questions passed 480 checks. All eight intended bookings in the 64-scenario suite were saved; the 100-question suite created none.
+The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build, 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
 
-The original public checkout was installed using the README setup procedure. Local and live-provider browser demonstrations covered booking, persistence, held drafts, summaries and traces. See [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) for run IDs, retained transport failures and scope. Fact anchors and coverage do not establish general semantic or clinical accuracy. Cloud CI and container/cluster runtime remain unverified.
+The 502 was reproduced before the fix: a plain-text/JSON prompt conflict triggered repair, then a correct caution (absence of a listed language does not prove inability) was rejected by a keyword guard. Instructions now consistently require internal JSON; the guard distinguishes explicit negated inference from an assertion of inability without crossing punctuation or contrast. Invalid content still has one repair and no silent local fallback.
 
+See [SUBMISSION_CHECK.md](SUBMISSION_CHECK.md) for exact run IDs and retained failures. This bounded retest does not guarantee every future model response. Cloud CI and container/cluster runtime remain unverified.
 
 
 ## 7. Scope and next steps
