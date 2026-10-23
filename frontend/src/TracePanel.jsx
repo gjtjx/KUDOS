@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { api } from './api';
+import { replyDisplay } from './replyDisplay';
 
 const number=value=>value==null?'—':value.toLocaleString();
 const duration=value=>value==null?'—':(value/1000).toFixed(2)+' s';
 const names={chat:'對話 / Chat',transcript_summary:'逐字稿摘要 / Transcript summary',route_intent:'意圖識別 / Intent routing',answer:'回答 / Answer',summarize_transcript:'摘要 / Summary'};
 const statuses={ok:'成功 / OK',error:'失敗 / Failed',running:'處理中 / Running',interrupted:'已中斷 / Interrupted'};
 const outcomes={cached:'使用既有結果 / Cached',booked:'已建立預約 / Booked',rejected:'預約未通過驗證 / Booking rejected',draft:'保留草稿 / Draft',answered:'已回答 / Answered',summarized:'已摘要 / Summarized'};
-export default function TracePanel(){
+export default function TracePanel({catalog}){
   const [open,setOpen]=useState(false),[data,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function refresh(){
     if(busy)return;
@@ -35,9 +36,9 @@ export default function TracePanel(){
         <small>統計範圍為保留的紀錄（上限 {data.retention_limit} 筆）；未回報用量顯示 —，不估算費用。 / Totals cover retained records; missing usage is shown as —. No cost estimate.</small>
         {!data.traces.length&&<p>尚無紀錄，完成一次對話或摘要後更新。 / No activity yet. Complete a chat or summary, then refresh.</p>}
         <div className="trace-list">{data.traces.map(t=><details key={t.trace_id}>
-          <summary>{names[t.operation]||t.operation} · {statuses[t.status]||t.status} · {duration(t.duration_ms)}{t.cache_hit?' · 快取 / Cached':''}</summary>
-          <p>{new Date(t.started_at).toLocaleString()} · {outcomes[t.outcome]||'—'}<br/><small>追蹤編號 / Trace ID: {t.trace_id}</small></p>
-          {t.spans.length?<ol>{t.spans.map(s=><li key={s.span_id}><b>{names[s.operation]||s.operation}</b> · {s.model} · {statuses[s.status]||s.status} · {duration(s.duration_ms)}<br/>Token {number(s.input_tokens)} / {number(s.output_tokens)}{s.error_code&&<span> · {s.error_code}</span>}</li>)}</ol>:<p>沒有新增模型呼叫 / No new model calls</p>}
+          <summary>{replyDisplay(names[t.operation]||t.operation,catalog)} · {replyDisplay(statuses[t.status]||t.status,catalog)} · {duration(t.duration_ms)}{t.cache_hit?' · 快取 / Cached':''}</summary>
+          <p>{new Date(t.started_at).toLocaleString()} · {outcomes[t.outcome]||'—'}</p>
+          {t.spans.length?<ol>{t.spans.map(s=><li key={s.span_id}><b>{replyDisplay(names[s.operation]||s.operation,catalog)}</b> · {replyDisplay(s.model||'',catalog)} · {replyDisplay(statuses[s.status]||s.status,catalog)} · {duration(s.duration_ms)}<br/>Token {number(s.input_tokens)} / {number(s.output_tokens)}{s.error_code&&<span> · {replyDisplay(s.error_code,catalog)||'處理失敗 / Processing failed'}</span>}</li>)}</ol>:<p>沒有新增模型呼叫 / No new model calls</p>}
         </details>)}</div>
       </>}
     </div>}

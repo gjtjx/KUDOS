@@ -21,7 +21,7 @@ test('fetches only when opened and renders empty metadata-only notice',async()=>
 });
 test('renders totals, cached requests, errors and individual calls',async()=>{
  api.mockResolvedValue(traced);await open();
- expect(await screen.findByText(/追蹤編號 \/ Trace ID: t1/)).toBeInTheDocument();
+ expect(await screen.findByText(/輸入 120/)).toBeInTheDocument();expect(screen.queryByText(/Trace ID/)).not.toBeInTheDocument();
  expect(screen.getByText(/test-model/)).toBeInTheDocument();
  expect(screen.getByText(/timeout/)).toBeInTheDocument();
  expect(screen.getByText(/沒有新增模型呼叫/)).toBeInTheDocument();

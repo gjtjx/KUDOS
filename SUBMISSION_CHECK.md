@@ -1,6 +1,13 @@
 # 提交前驗收 / Submission review
 
-## 最新介面：草稿與目錄統一名稱 / Latest draft and directory display
+## 最新介面：全頁編號與來源檢查 / Latest whole-page display check
+
+2026-10-23：移除患者卡片編號，隱藏病歷、追蹤及模型響應編號；消息、摘要／顯示 JSON／引文、錯誤提示與追蹤文字統一處理來源及內部參照，診所改用名稱，預約編號保留。58 項前端測試及建置通過，包含各面板與 details 全部展開的 DOM 檢查；另確認日期、價格、準備要求與姓名保留。這是元件／DOM 測試，沒有宣稱重跑瀏覽器端到端或付費模型驗收。
+
+使用者正在編輯的輸入及發送原文不改寫；消息氣泡僅處理顯示。摘要原文與引句也不改寫，處理後的展示引句會標明參照已隱藏。前端隱藏不是資料匿名化或權限控制；原始 API 仍保留內部 ID 與 evidence。
+The latest UI-only patch passed 58 frontend tests and build, including expanded generated-content checks. Booking IDs remain visible; editable input, outbound requests, raw API data and exact evidence remain unchanged. Prior backend/live results retain their original scope.
+
+## 前次介面：草稿與目錄統一名稱 / Latest draft and directory display
 
 2026-10-23：草稿及右側醫生／服務目錄以名稱顯示，快捷問題也使用名稱，預約編號保留。前端 53 項測試、覆蓋率及建置通過；測試涵蓋名稱、缺欄位、載入中、未知編號、日期時間、預約編號與後台資料不變。另用隔離本機 API 驗證快捷問題解析為原醫生／服務且零寫入。正式應用靜態資產已更新，後端與密鑰未改；不重跑付費模型或部署驗收。
 The latest display-only patch passed 53 frontend tests and build plus one isolated local-API check for the named suggestion. Prior backend/live evidence retains the scope below.

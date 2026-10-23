@@ -113,7 +113,7 @@ test('hides source filenames in assistant replies without changing user text or 
   const assistant=document.querySelector('.message.assistant .bubble');
   expect(assistant.textContent).not.toMatch(/\.csv/i);
   expect(assistant.textContent).toContain('USD 150');
-  expect(document.querySelector('.message.user .bubble')).toHaveTextContent('doctors.csv');
+  expect(document.querySelector('.message.user .bubble').textContent).not.toContain('.csv');expect(chats()[0].message).toBe('doctors.csv');
   expect(document.querySelector('.sources')).toBeNull();
   expect(original.reply).toContain('doctors.csv');expect(original.sources).toHaveLength(2);
 });
@@ -124,7 +124,7 @@ test('assistant resolves internal IDs to catalog names and retains booking IDs',
   const user=await mount();await send(user,'D101 T001');
   expect(await screen.findByText('B1001: Dr. Sarah Jenkins / General Health Checkup, USD 150')).toBeInTheDocument();
   expect(document.querySelector('.message.assistant .bubble').textContent).not.toMatch(/D101|T001/);
-  expect(document.querySelector('.message.user .bubble')).toHaveTextContent('D101 T001');
+  expect(document.querySelector('.message.user .bubble').textContent).not.toMatch(/D101|T001/);expect(chats()[0].message).toBe('D101 T001');
 });
 
 test('named booking suggestion submits names and preserves booking IDs in the list',async()=>{
@@ -133,4 +133,33 @@ test('named booking suggestion submits names and preserves booking IDs in the li
   await user.click(button);await screen.findByText(reply.reply);
   expect(chats()[0].message).toBe('幫我預約 Dr. Sarah Jenkins 的一般健康檢查');
   expect(document.querySelector('.bookings .id')).toHaveTextContent('B1');
+});
+
+test('whole page hides internal references even with summary, JSON and activity expanded',async()=>{
+  const directory={...initial['/catalog'],clinics:[{clinic_id:'C001',clinic_name:'Metro Care'}]};
+  const raw='P001 H9002 D101 T001 C001 doctors.csv B1001';
+  const summary={summary:{chief_complaint:raw,diagnosis:null,medication:null,doctor_instructions:null},evidence:{chief_complaint:[raw],diagnosis:[],medication:[],doctor_instructions:[]},notice:'patients.csv P001 H9002'};
+  const activity={enabled:true,retention_limit:1000,summary:{requests:1,llm_calls:1,errors:0,input_tokens:10,output_tokens:20,cache_hits:0,mean_latency_ms:100},traces:[{trace_id:'private-trace-id',operation:'chat',status:'ok',started_at:'2026-10-23T00:00:00Z',duration_ms:100,spans:[{span_id:'private-span-id',operation:'answer',model:'test-model',status:'error',duration_ms:50,input_tokens:10,output_tokens:20,error_code:'P001 H9002 doctors.csv'}]}]};
+  api.mockImplementation(async path=>path==='/catalog'?directory:path==='/health'?{mode:'llm'}:path==='/chat'?{...reply,mode:'llm',reply:raw,tool_trace:[{tool:'P001 H9002 treatments.csv',status:'ok',response_id:'private-response-id',booking_id:'B1001'}]}:path==='/transcripts/summarize'?summary:path.startsWith('/observability')?activity:initial[path]);
+  const user=await mount();await send(user,'查詢 P001 H9002');await screen.findByText(/LLM · 就診流程/);
+  await user.click(screen.getByRole('button',{name:/開啟/}));
+  const transcript=screen.getByLabelText('醫病對話逐字稿 / Doctor-patient transcript');
+  await user.type(transcript,raw);await user.click(screen.getByRole('button',{name:/產生摘要/}));
+  await screen.findByText(/顯示引文已隱藏/);
+  await user.click(screen.getByText('顯示用 JSON / Display JSON'));
+  await user.click(screen.getByRole('button',{name:/查看紀錄/}));await screen.findByText(/test-model/);
+  for(const details of document.querySelectorAll('details'))details.open=true;
+  const generated=document.body.cloneNode(true);generated.querySelectorAll('textarea,input').forEach(node=>node.remove());
+  expect(generated.textContent).not.toMatch(/P001|H9002|D101|T001|C001|\.csv|private-trace-id|private-response-id|private-span-id/);
+  expect(transcript).toHaveValue(raw);
+  expect(document.body.textContent).toContain('B1001');expect(document.querySelector('.bookings .id')).toHaveTextContent('B1');
+  expect(document.body.textContent).toContain('Dr. Sarah Jenkins');expect(document.body.textContent).toContain('一般健康檢查');
+  expect(chats()[0].message).toBe('查詢 P001 H9002');
+  const submitted=api.mock.calls.find(([path])=>path==='/transcripts/summarize');expect(JSON.parse(submitted[1].body).transcript).toBe(raw);
+  expect(summary.evidence.chief_complaint[0]).toBe(raw);expect(summary.summary.chief_complaint).toBe(raw);
+});
+test('visible chat errors hide patient, history and source references',async()=>{
+  api.mockImplementation(async path=>{if(path==='/chat')throw Error('P001 H9002 doctors.csv B1001');return initial[path]});
+  const user=await mount();await send(user);const alert=await screen.findByRole('alert');
+  expect(alert.textContent).not.toMatch(/P001|H9002|\.csv/);expect(alert.textContent).toContain('B1001');
 });

@@ -25,7 +25,7 @@ A clinic assistant take-home project for grounded service Q&A, existing appointm
 
 | 功能 / Feature | 實作內容 / Implementation |
 |---|---|
-| 知識問答 / Grounded Q&A | 查詢診所、醫生、療程與政策；API 保留來源供查核，聊天隱藏來源檔名與標籤，回覆、草稿與右側目錄的醫生／服務均顯示名稱，預約編號保留。 / Catalog-grounded answers; chat hides source labels; replies, drafts and the directory show doctor/service names while retaining booking IDs. |
+| 知識問答 / Grounded Q&A | 查詢診所、醫生、療程與政策；API 保留來源供查核，聊天隱藏來源檔名與標籤，醫生／服務／診所顯示名稱；患者、病歷及追蹤編號在頁面生成內容中隱藏，只保留預約編號。 / Catalog-grounded answers; chat hides source labels; generated page content shows entity names and hides patient/history/trace IDs while retaining booking IDs. |
 | 個人化引導 / Personalized guidance | 使用固定模擬病人 P001 的過敏、病史與預約資訊。 / Uses the predefined mock patient's allergies, history and appointments. |
 | 多輪預約 / Conversational booking | 收集、修正或撤回醫生、服務、日期及時間；中途問答保留草稿，明確暫停提交時等待確認。 / Collects and updates booking fields, preserves drafts across questions and respects requests to wait. |
 | 真實資料寫入 / Persistent appointments | 經 REST 驗證並寫入 SQLite；請求重試去重，前端更新預約列表。 / Validated REST writes, retry deduplication and refreshed booking lists. |
@@ -192,7 +192,7 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 | 驗證 / Validation | 結果 / Result |
 |---|---|
 | 後端單元／整合 / Backend | 157 passed; 97.50% combined line/branch coverage |
-| 前端元件／單元 / Frontend | 53 passed; production build passed (latest display-only change) |
+| 前端元件／單元 / Frontend | 58 passed; production build passed (latest display-only change) |
 | 真實核心流程與摘要 / Live core and summaries | 82/82 checks |
 | 患者醫生關係 / Patient-doctor relationships | 10 scenarios / 14 turns / 127 checks passed |
 | 原失敗問法重複 / Original failing conversation | 6 repetitions / 12 turns / 96 checks passed |

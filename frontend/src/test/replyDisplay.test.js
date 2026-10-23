@@ -88,3 +88,19 @@ test('service display supports Chinese aliases and avoids duplicated untranslate
   expect(treatmentDisplay({treatment_name:'Test'})).toBe('Test');
   expect(treatmentDisplay({treatment_name:'Test',zh:{treatment_name:'Test'}})).toBe('Test');
 });
+
+test('hides patient/history references while keeping visit facts and both booking ID formats',()=>{
+  const shown=replyDisplay('患者 P001 的病歷 H9002（2026-04-12）：血壓 120/80。預約 B1001 / BABCDEF123456。');
+  expect(shown).not.toMatch(/P001|H9002/);expect(shown).toContain('2026-04-12');expect(shown).toContain('120/80');expect(shown).toContain('B1001 / BABCDEF123456');
+  expect(replyDisplay('John Doe (P001) / visit (H9002)')).toBe('John Doe  / visit');
+});
+test('clinic IDs resolve to names without duplication and unknown clinics are explicit',()=>{
+  const c={...catalog,clinics:[{clinic_id:'C001',clinic_name:'Metro Care'}]};
+  expect(replyDisplay('C001 / Metro Care (C001)',c)).toBe('Metro Care / Metro Care');
+  expect(replyDisplay('C999',c)).toBe('unidentified clinic');
+  expect(replyDisplay('診所 C999',c)).toBe('診所 未識別診所');
+});
+test('hides unexpected source filenames too and preserves internal API data',()=>{
+  const raw='P001 H9002 custom-data.v2.csv B1001';
+  expect(replyDisplay(raw)).not.toMatch(/P001|H9002|custom-data.v2.csv/);expect(replyDisplay(raw)).toContain('B1001');expect(raw).toBe('P001 H9002 custom-data.v2.csv B1001');
+});

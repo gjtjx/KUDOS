@@ -1,5 +1,5 @@
 // Presentation only: retain original replies and structured evidence in the API.
-const files=/(?:patient_treatment_history|patient_bookings|patients|clinics|doctors|treatments)\.csv/gi;
+const files=/\b[A-Za-z0-9_][A-Za-z0-9_.-]*\.csv\b/gi;
 function citationOnly(text){
   if(text.search(files)<0)return false;
   return !text.replace(files,'').replace(/\b[CDTPH]\d+\b/gi,'')
@@ -27,7 +27,8 @@ export function draftDisplay(key,value,catalog){
 }
 function entityNames(line,catalog){
   const chinese=/[\u4e00-\u9fff]/.test(line);
-  const records=[...(catalog?.doctors||[]).map(d=>({id:d.doctor_id,name:d.full_name,names:[d.full_name]})),
+  const records=[...(catalog?.clinics||[]).map(c=>({id:c.clinic_id,name:c.clinic_name,names:[c.clinic_name]})),
+    ...(catalog?.doctors||[]).map(d=>({id:d.doctor_id,name:d.full_name,names:[d.full_name]})),
     ...(catalog?.treatments||[]).map(t=>({id:t.treatment_id,name:chinese?(t.zh?.treatment_name||t.treatment_name_zh||t.treatment_name):t.treatment_name,
       names:[t.treatment_name,t.zh?.treatment_name,t.treatment_name_zh].filter(Boolean)}))];
   for(const item of records){
@@ -41,8 +42,14 @@ function entityNames(line,catalog){
     }
   }
   const names=new Map(records.map(item=>[item.id.toUpperCase(),item.name]));
-  return line.replace(/\b([DT])\d+\b/gi,(id,type)=>names.get(id.toUpperCase())||
-    (chinese?(type.toUpperCase()==='D'?'未識別醫生':'未識別服務'):(type.toUpperCase()==='D'?'unidentified doctor':'unidentified service'))).trim();
+  const unknown=chinese?{D:'未識別醫生',T:'未識別服務',C:'未識別診所'}:{D:'unidentified doctor',T:'unidentified service',C:'unidentified clinic'};
+  return line.replace(/\b([DTC])\d+\b/gi,(id,type)=>names.get(id.toUpperCase())||unknown[type.toUpperCase()]).trim();
+}
+function privateReferences(line){
+  const chinese=/[\u4e00-\u9fff]/.test(line);
+  return line.replace(/[（(]\s*[PH]\d+\s*[）)]/gi,'')
+    .replace(/\bP\d+\b/gi,chinese?'患者':'patient')
+    .replace(/\bH\d+\b/gi,chinese?'就診紀錄':'visit record');
 }
 export function replyDisplay(text,catalog){
   return text.split('\n').map(line=>{
@@ -51,6 +58,6 @@ export function replyDisplay(text,catalog){
     line=line.replace(/(?:來源|来源|Sources?)\s*[:：][^。\n]*[。.]?/gi,part=>citationOnly(part)?'':part);
     // Inline attribution may contain factual content; rename the filename rather
     // than deleting the surrounding clause (prices, instructions, names, etc.).
-    return entityNames(line.replace(files,/[\u4e00-\u9fff]/.test(line)?'現有資料':'available records'),catalog);
+    return privateReferences(entityNames(line.replace(files,/[\u4e00-\u9fff]/.test(line)?'現有資料':'available records'),catalog));
   }).filter((line,i,lines)=>line||i>0&&lines[i-1]).join('\n').trim();
 }

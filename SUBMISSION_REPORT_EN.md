@@ -74,7 +74,7 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build (the latest display-only patch passed 53 frontend tests and a fresh build), 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
+The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build (the latest display-only patch passed 58 frontend tests and a fresh build), 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
 
 The 502 was reproduced before the fix: a plain-text/JSON prompt conflict triggered repair, then a correct caution (absence of a listed language does not prove inability) was rejected by a keyword guard. Instructions now consistently require internal JSON; the guard distinguishes explicit negated inference from an assertion of inability without crossing punctuation or contrast. Invalid content still has one repair and no silent local fallback.
 
@@ -102,3 +102,5 @@ Future work should prioritize a labelled routing/retrieval evaluation set, acces
 The chat formatter resolves doctor/service IDs using the current catalog, removes adjacent redundant IDs and preserves booking IDs. Unknown IDs do not receive guessed names. This changes presentation only; raw API evidence and booking payloads remain unchanged.
 
 Booking drafts and the doctor/service directory now display names rather than internal IDs. The booking suggestion uses names too; a local isolated API check confirmed the same doctor/service selection with zero writes. Dates, times, internal API/state IDs and booking IDs remain unchanged.
+
+A whole-page component check opens chat/tool details, catalog, transcript output/JSON and model activity. Generated display content hides patient/history/trace IDs and source filenames while retaining booking IDs and entity names. Editable input and outbound requests remain original. Displayed quotes with hidden references are labelled; exact evidence remains in the raw API. This is presentation, not access control or anonymization.
