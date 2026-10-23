@@ -11,7 +11,7 @@
 
 ClinicPilot is a working clinic assistant prototype for a predefined mock patient. It supports catalog-grounded questions, doctor and service recommendations, existing appointment queries and conversational booking with actual database persistence.
 
-The workbench includes paired Traditional Chinese and English interface text, source references, an appointment list, a booking draft, transcript summarization and a model-activity panel.
+The workbench includes paired Traditional Chinese and English interface text, API-retained evidence (source filenames hidden in chat), an appointment list, a booking draft, transcript summarization and a model-activity panel.
 
 ## 2. Assignment coverage
 
@@ -23,7 +23,7 @@ The workbench includes paired Traditional Chinese and English interface text, so
 | New appointment execution | POST /api/bookings with validation, transaction and idempotency |
 | Fixed patient context | P001 profile, allergies, treatment history and current appointments |
 | Relational persistence | Six CSV-seeded business tables, an explicit doctor/service bridge, plus state and reliability tables |
-| React workbench | Chat, retry, automatic/manual booking refresh and source display |
+| React workbench | Chat, retry and booking refresh; API evidence retained, source filenames hidden in chat |
 | Optional transcript summary | Four-field JSON with verbatim evidence and null for unmentioned facts |
 | Optional observability | Persistent request/generation traces, timing, usage and error categories |
 | Optional deployment | Docker Compose and Kubernetes manifests; runtime acceptance pending |
@@ -62,7 +62,7 @@ Startup reads .env only, with process environment variables taking precedence. C
 
 Suggested demonstration:
 
-1. Ask about a clinic or service and inspect the sources.
+1. Ask about a clinic or service; inspect API evidence separately if needed.
 2. Follow up using a reference to the recommended doctor.
 3. Query the current patient's appointments.
 4. Start a new booking and supply details across turns.
@@ -74,7 +74,7 @@ Use a future date and an isolated demonstration database.
 
 ## 6. Recorded validation
 
-The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build, 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
+The post-fix review passed 157 backend tests (97.50% combined coverage), 29 frontend tests and a production build (the later display-only patch passed 38 frontend tests and a fresh build), 82 core live checks including summaries, 127 relationship checks, and 96 checks across six repetitions of the originally failing conversation. The full 64-scenario suite passed 525 checks; the 100 follow-up, 100 doctor and 60 research-based questions passed 701, 700 and 480 checks respectively.
 
 The 502 was reproduced before the fix: a plain-text/JSON prompt conflict triggered repair, then a correct caution (absence of a listed language does not prove inability) was rejected by a keyword guard. Instructions now consistently require internal JSON; the guard distinguishes explicit negated inference from an assertion of inability without crossing punctuation or contrast. Invalid content still has one repair and no silent local fallback.
 

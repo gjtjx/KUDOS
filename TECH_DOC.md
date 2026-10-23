@@ -163,3 +163,8 @@ Transcripts, persisted conversations and metadata-only traces have different dat
 These catalog and timezone assumptions are enforced or documented independently of model output.
 
 既有預約取消／改期、音訊辨識、外部 Langfuse、身份授權與臨床驗證未實作。部署設定及其未驗收範圍見 [DEPLOYMENT](DEPLOYMENT.md)，原始需求對照見 [REQUIREMENTS_REVIEW](REQUIREMENTS_REVIEW.md)。
+
+## 來源展示偏好 / Source display preference
+
+聊天介面不顯示來源標籤；`replyDisplay.js` 只在 assistant bubble 隱藏 CSV 檔名與純引用片段。含實際內容的句子保留，內嵌檔名改為「現有資料 / available records」。使用者輸入、後端 reply/sources、模型提示與驗證、RAG 和資料庫均未改動；這不是資料遮罩或權限控制。
+The presentation-only formatter hides source badges and filenames while retaining factual content. Raw replies and evidence remain in the API; user messages are untouched. This is display preference, not access control.

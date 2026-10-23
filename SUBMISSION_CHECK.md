@@ -1,5 +1,10 @@
 # 提交前驗收 / Submission review
 
+## 最新介面調整：隱藏來源 / Latest display-only adjustment
+
+2026-10-23：依使用者偏好隱藏聊天來源標籤與 CSV 檔名。後端回覆及 sources 保留，模型、RAG、預約和部署設定未變；不重跑付費模型全量測試。前端 38 項測試及正式建置通過，覆蓋率包含新 formatter；測試核對姓名、價格、日期、條件準備與使用者輸入不被誤刪。正式應用更新靜態資產，重新整理頁面生效。下列為先前雙語修復的完整後端／真實模型驗收。
+The latest patch changes presentation only: 38 frontend tests and build passed. Raw API evidence remains available. The prior backend/live evidence below retains its scope.
+
 ## 最新：雙語 502 修復與完整複測 / Latest bilingual-fix review
 
 Reviewed **2026-10-23 (Asia/Shanghai)**, public baseline `172fe20`. The bounded full retest passed after the corrections below. Live mode uses `deepseek-flash`; no model substitution or local fallback was introduced.

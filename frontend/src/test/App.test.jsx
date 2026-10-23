@@ -26,7 +26,7 @@ test('new conversation sends reported phrase and renders grounded response and t
   const user=await mount();await send(user);
   expect(await screen.findByText(reply.reply)).toBeInTheDocument();
   expect(chats()[0].message).toBe('我到医院的流程');expect(chats()[0].session_id).toBe(localStorage.getItem('clinic-session'));
-  expect(screen.getByText('clinics.csv · C001')).toBeInTheDocument();expect(screen.getByText(/就診流程 \/ Visit guide ·/)).toBeInTheDocument();
+  expect(screen.queryByText('clinics.csv · C001')).not.toBeInTheDocument();expect(screen.getByText(/就診流程 \/ Visit guide ·/)).toBeInTheDocument();
   expect(api.mock.calls.filter(([p])=>p==='/bookings')).toHaveLength(2);
 });
 test('suggested question submits Traditional Chinese',async()=>{
@@ -39,7 +39,7 @@ test('patient doctor question shows relationship answer and preserves booking dr
   const user=await mount();await send(user,'我的医生是？');
   expect(await screen.findByText('未指定主治醫生 / No assigned primary doctor')).toBeInTheDocument();
   expect(screen.getByText(/我的醫生 \/ My doctors ·/)).toBeInTheDocument();
-  expect(screen.getByText('patient_treatment_history.csv · H9002')).toBeInTheDocument();
+  expect(screen.queryByText('patient_treatment_history.csv · H9002')).not.toBeInTheDocument();
   expect(screen.getByText('醫生 / Doctor: D103')).toBeInTheDocument();
   expect(screen.getByText('B1')).toBeInTheDocument();
 });
@@ -99,4 +99,17 @@ test('LLM mode and rejected tool result render correctly',async()=>{
   api.mockImplementation(async(path)=>path==='/health'?{mode:'llm'}:path==='/chat'?{...reply,mode:'llm',intent:'book',tool_trace:[{tool:'POST /api/bookings',status:'rejected'}]}:initial[path]);
   const user=await mount();expect(screen.getByText(/LLM · 模型工具呼叫/)).toBeInTheDocument();
   await send(user);await screen.findByText(reply.reply);expect(screen.getByText(/POST \/api\/bookings → 已拒絕/)).toBeInTheDocument();
+});
+
+test('hides source filenames in assistant replies without changing user text or API evidence',async()=>{
+  const original={...reply,reply:'Dr. Sarah Jenkins 的診金 USD 150。（來源：doctors.csv，D101）\nDr. Sarah Jenkins has a USD 150 fee. (Source: doctors.csv, D101)',sources:[{source:'doctors.csv',id:'D101'},{source:'treatments.csv',id:'T001'}]};
+  api.mockImplementation(async(path)=>path==='/chat'?original:initial[path]);
+  const user=await mount();await send(user,'doctors.csv');
+  expect(await screen.findByText(/Dr. Sarah Jenkins has a USD 150 fee/)).toBeInTheDocument();
+  const assistant=document.querySelector('.message.assistant .bubble');
+  expect(assistant.textContent).not.toMatch(/\.csv/i);
+  expect(assistant.textContent).toContain('USD 150');
+  expect(document.querySelector('.message.user .bubble')).toHaveTextContent('doctors.csv');
+  expect(document.querySelector('.sources')).toBeNull();
+  expect(original.reply).toContain('doctors.csv');expect(original.sources).toHaveLength(2);
 });

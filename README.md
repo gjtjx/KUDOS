@@ -25,7 +25,7 @@ A clinic assistant take-home project for grounded service Q&A, existing appointm
 
 | 功能 / Feature | 實作內容 / Implementation |
 |---|---|
-| 知識問答 / Grounded Q&A | 查詢診所、醫生、療程與政策，附資料來源與記錄 ID。 / Answers from catalog records with source labels and record IDs. |
+| 知識問答 / Grounded Q&A | 查詢診所、醫生、療程與政策；API 保留來源供查核，聊天介面隱藏來源檔名與標籤。 / Catalog-grounded answers; evidence remains in the API while chat hides source filenames and badges. |
 | 個人化引導 / Personalized guidance | 使用固定模擬病人 P001 的過敏、病史與預約資訊。 / Uses the predefined mock patient's allergies, history and appointments. |
 | 多輪預約 / Conversational booking | 收集、修正或撤回醫生、服務、日期及時間；中途問答保留草稿，明確暫停提交時等待確認。 / Collects and updates booking fields, preserves drafts across questions and respects requests to wait. |
 | 真實資料寫入 / Persistent appointments | 經 REST 驗證並寫入 SQLite；請求重試去重，前端更新預約列表。 / Validated REST writes, retry deduplication and refreshed booking lists. |
@@ -171,7 +171,7 @@ flowchart TD
 | 步驟 / Step | 輸入或操作 / Input or action | 預期結果 / Expected result |
 |---|---|---|
 | 1. 就診引導 / Visit guidance | 「我到醫院的流程」 / “What should I expect when visiting the clinic?” | 有依據的引導與現有預約資訊。 / Grounded guidance and appointment context. |
-| 2. 服務查詢 / Service Q&A | “I have a skin rash. What service is available?” | 目錄內的服務建議與來源。 / Catalog-based suggestions with sources. |
+| 2. 服務查詢 / Service Q&A | “I have a skin rash. What service is available?” | 目錄內的服務建議；聊天不顯示來源檔名。 / Catalog-based suggestions without source filenames in chat. |
 | 3. 查詢預約 / Existing bookings | “When is my next appointment?” | 讀取資料庫中未來且已確認的預約。 / Reads future confirmed bookings. |
 | 4. 多輪收集 / Slot collection | 新對話：“I want to book an appointment.” → “Dr. Sarah Jenkins for a checkup.” | 收集醫生與服務，再追問日期時間。 / Selects doctor/service and asks for missing fields. |
 | 5. 儲存與重載 / Save and reload | 輸入未來日期時間，例如 “2035-11-08 at 9:30 am”。 / Supply a future date and time. | 有效且獲授權的完整草稿寫入；更新列表，重載後仍存在。 / A valid, authorized draft is saved and persists after reload. |
@@ -192,7 +192,7 @@ Local 模式的日期、名稱及問法較有限；支援 ID、基本名稱、`Y
 | 驗證 / Validation | 結果 / Result |
 |---|---|
 | 後端單元／整合 / Backend | 157 passed; 97.50% combined line/branch coverage |
-| 前端元件／單元 / Frontend | 29 passed; production build passed |
+| 前端元件／單元 / Frontend | 38 passed; production build passed (latest display-only change) |
 | 真實核心流程與摘要 / Live core and summaries | 82/82 checks |
 | 患者醫生關係 / Patient-doctor relationships | 10 scenarios / 14 turns / 127 checks passed |
 | 原失敗問法重複 / Original failing conversation | 6 repetitions / 12 turns / 96 checks passed |
